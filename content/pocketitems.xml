@@ -1,12 +1,12 @@
 <pocketitems>
-    <card type="rune" pickup="68" achievement="89" description="tbd" hud="Hagalaz?" name="Hagalaz?" mimiccharge="6" />
-    <card type="rune" pickup="68" achievement="90" description="Refinement" hud="Jera?" name="Jera?" mimiccharge="8" />
-    <card type="rune" pickup="68" achievement="91" description="Contraband" hud="Ehwaz?" name="Ehwaz?" mimiccharge="4" />
-    <card type="rune" pickup="68" achievement="92" description="Affliction" hud="Dagaz?" name="Dagaz?" mimiccharge="1" />
-    <card type="rune" pickup="69" achievement="93" description="Knowledge" hud="Ansuz?" name="Ansuz?" mimiccharge="6" />
-    <card type="rune" pickup="69" achievement="94" description="Similarity" hud="Perthro?" name="Perthro?" mimiccharge="6" />
-    <card type="rune" pickup="69" achievement="95" description="Sacrifice" hud="Berkano?" name="Berkano?" mimiccharge="12" />
-    <card type="rune" pickup="69" achievement="96" description="tbd" hud="Algiz?" name="Algiz?" mimiccharge="6" />
-    <card type="rune" pickup="69" achievement="233" description="Conversion" hud="Blank Rune?" name="Blank Rune?" mimiccharge="6" />
-    <card type="rune" pickup="70" achievement="309" description="tbd" hud="Black Rune?" name="Black Rune?" mimiccharge="6" />
+    <card type="rune" pickup="68" achievement="89" hud="Hagalaz?" name="Hagalaz?" description="Foundation" mimiccharge="4" />
+    <card type="rune" pickup="68" achievement="90" hud="Jera?" name="Jera?" description="Refinement" mimiccharge="8" />
+    <card type="rune" pickup="68" achievement="91" hud="Ehwaz?" name="Ehwaz?" description="Contraband" mimiccharge="4" />
+    <card type="rune" pickup="68" achievement="92" hud="Dagaz?" name="Dagaz?" description="Affliction" mimiccharge="1" />
+    <card type="rune" pickup="69" achievement="93" hud="Ansuz?" name="Ansuz?" description="Knowledge" mimiccharge="6" />
+    <card type="rune" pickup="69" achievement="94" hud="Perthro?" name="Perthro?" description="Similarity" mimiccharge="6" />
+    <card type="rune" pickup="69" achievement="95" hud="Berkano?" name="Berkano?" description="Sacrifice" mimiccharge="12" />
+    <card type="rune" pickup="69" achievement="96" hud="Algiz?" name="Algiz?" description="tbd" mimiccharge="6" />
+    <card type="rune" pickup="69" achievement="233" hud="Blank Rune?" name="Blank Rune?" description="Conversion" mimiccharge="6" />
+    <card type="rune" pickup="70" achievement="309" hud="Black Rune?" name="Black Rune?" description="tbd" mimiccharge="6" />
 </pocketitems>
