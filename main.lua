@@ -13,6 +13,41 @@ local flippedAlgizID = Isaac.GetCardIdByName("Algiz?")
 local flippedBlankID = Isaac.GetCardIdByName("Blank Rune?")
 local flippedBlackID = Isaac.GetCardIdByName("Black Rune?")
 
+--Hagalaz? globals
+local floorColorPulseCounter = nil
+local floorColorPulseDuration = nil
+local floorColorPulseRo, floorColorPulseGo, floorColorPulseBo
+
+--Ehwaz? globals
+local shouldSpawnReturnCard = nil
+
+--Dagaz? globals
+local flippedDagazActive = nil
+local flippedDagazPlayer = nil
+local flippedDagazCurses = {
+    LevelCurse.CURSE_OF_DARKNESS,
+    LevelCurse.CURSE_OF_THE_LOST,
+    LevelCurse.CURSE_OF_THE_UNKNOWN,
+    LevelCurse.CURSE_OF_MAZE,
+    LevelCurse.CURSE_OF_BLIND
+}
+
+function Runes:UseFlippedHagalaz()
+    local room = Game():GetRoom()
+
+    for i = 0, room:GetGridSize() - 1 do
+        local gridEntity = room:GetGridEntity(i)
+        if gridEntity and gridEntity:GetType() == GridEntityType.GRID_PIT then
+            room:RemoveGridEntity(i, 0, true)
+            Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, room:GetGridPosition(i), Vector(0,0), nil)
+        end
+    end
+    
+    InitFloorColorPulse(0.355/2,.601/2,.554/2, 60.0)
+end
+
+mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedHagalaz, flippedHagalazID)
+
 --rerolls basic pickups into more advanced forms (less chance for coins)
 function Runes:UseFlippedJera()
     local game = Game()
@@ -52,7 +87,7 @@ function Runes:UseFlippedEhwaz()
     if blackMarketIndex then
         --level:ChangeRoom(blackMarketIndex)
         game:StartRoomTransition(blackMarketIndex, Direction.NO_DIRECTION, RoomTransitionAnim.TELEPORT)
-        Runes.shouldSpawnReturnCard = true
+        shouldSpawnReturnCard = true
     else
         print("No Black Market exists on this floor!")
     end
@@ -60,54 +95,21 @@ end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedEhwaz, flippedEhwazID)
 
---EHWAZ?: spawns a fool card in the black market so the player can get out
-function Runes:OnEnterBlackMarket()
-    if Runes.shouldSpawnReturnCard then
-        Runes.shouldSpawnReturnCard = false
-
-        local player = Isaac.GetPlayer(0)
-        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_FOOL, player.Position + Vector(0, 40), Vector(0,0), nil)
-    end 
-end
-
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.OnEnterBlackMarket)
-
---adds a random curse to the current floor
+--adds a random curse and a chance to add status effects to enemies when walking into rooms 
+--for the current floor. The chance for a status effect increases with amount of curses
 function Runes:UseFlippedDagaz(card, player, flags)
     local level = Game():GetLevel()
     local newCurse = GetRandomCurse()
     level:AddCurse(newCurse, false)
-    Runes.isFlippedDagazActive = true
-    Runes.Player = player
+    flippedDagazActive = true
+    flippedDagazPlayer = player
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedDagaz, flippedDagazID)
 
-function Runes:OnNewRoomFlippedDagazActive()
-    if Runes.isFlippedDagazActive ~= true or Runes.Player == nil then
-        return
-    end
-
-    for _, entity in ipairs(Isaac.GetRoomEntities()) do
-        if entity and entity.IsActiveEnemy and entity.IsVulnerableEnemy and entity.Type >= EntityType.ENTITY_GAPER and entity.Type <= EntityType.ENTITY_BEAST then
-            ApplyRandomStatusEffect(entity, Runes.Player)
-        end
-    end
-end
-
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.OnNewRoomFlippedDagazActive)
-
-function Runes:DisableFlippedDagaz()
-    Runes.isFlippedDagazActive = false
-    print("isFlippedDagazActive: " .. tostring(Runes.isFlippedDagazActive))
-end
-
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.DisableFlippedDagaz)
-
 --redesign
 function Runes:UseFlippedAnsuz()
 
-    Runes.toggleSpecialRedRoomSearch = true
     local level = Game():GetLevel()
     --find usr
     local ultraSecretIndex = level:QueryRoomTypeIndex(RoomType.ROOM_ULTRASECRET, true, RNG(), true)
@@ -123,7 +125,6 @@ end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAnsuz, flippedAnsuzID)
 
---add poof fx
 --change max loops
 --add eid support
 function Runes:UseFlippedPerthro()
@@ -162,6 +163,7 @@ function Runes:UseFlippedPerthro()
             if pedestalItem and newItem then
                 --print("new item id: " .. tostring(newItem))
                 pedestalItem:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, newItem)
+                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, pedestalItem.Position, Vector(0,0), nil)
             else
                 --print("Error: Cannot morph, pedestalItem or newItem is nil.")
             end
@@ -175,23 +177,21 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedPerthro, flippedPerthr
 --add eid
 --deletes up to 2 vanilla familiars and turns them into items from the current room's pool
 function Runes:UseFlippedBerkano(card, player, flags)
-    --print("using berkano?")
+
     --find familiars to remove
     local entities = Isaac.GetRoomEntities()
     local eligibleFamiliarCollectibles = {}
     local familiarPositions = {}
+
     for _, entity in ipairs(entities) do
         local familiar = entity:ToFamiliar()
         if familiar then
-            --print("found a familiar")
             
             local collectibleID = GetCollectibleFromFamiliar(familiar)
             if collectibleID ~= nil then
-                --print("familiar is eligible for removal")
                 table.insert(familiarPositions, familiar.Position)
                 table.insert(eligibleFamiliarCollectibles, collectibleID)
             end
-            --print("familiar wasn't eligible for removal")
         end
     end
 
@@ -219,6 +219,7 @@ function Runes:UseFlippedBerkano(card, player, flags)
     for i = 1, familiarsKilled do
         local collectibleID = itemPoolObj:GetCollectible(roomPool, true, rng:Next())
         Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, collectibleID, familiarPositions[i], Vector(0,0), nil)
+        Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF04, 0, familiarPositions[i], Vector(0,0), nil)
     end
     
 end
@@ -228,22 +229,70 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBerkano, flippedBerkan
 
 --turns all runes on the ground in the room into flipped variant
 function Runes:UseFlippedBlank()
-    print("using flipped blank")
     local entities = Isaac.GetRoomEntities()
     for _, entity in ipairs(entities) do
         if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_TAROTCARD then
-            print("found a card pickup")
             local pickup = entity:ToPickup()
             if pickup and (pickup.SubType >= Card.RUNE_HAGALAZ and pickup.SubType <= Card.RUNE_BLACK) then
-                print("found a vanilla rune")
                 pickup:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, GetFlippedIdFromNormal(pickup.SubType))
-                print("changed rune to flipped version")
+                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, pickup.Position, Vector(0,0), nil)
             end
         end
     end
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBlank, flippedBlankID)
+
+function InitFloorColorPulse(ro, go, bo, duration)
+    
+    floorColorPulseCounter = 0.0
+    floorColorPulseDuration = duration
+    floorColorPulseRo = ro
+    floorColorPulseGo = go
+    floorColorPulseBo = bo
+end
+
+--HAGALAZ?: sets the floor color and then gradually reduces it back to normal
+function FloorColorPulse()
+    
+    if floorColorPulseCounter == 0.0 then
+        Game():GetRoom():SetFloorColor(Color(1, 1, 1, 1, floorColorPulseRo, floorColorPulseGo, floorColorPulseBo))
+    else
+        local progress = floorColorPulseCounter / floorColorPulseDuration
+        local partialRo = floorColorPulseRo * (1 - progress)
+        local partialGo = floorColorPulseGo * (1 - progress)
+        local partialBo = floorColorPulseBo * (1 - progress)
+
+        print("setFloorColor: " .. tostring(partialBo))
+        Game():GetRoom():SetFloorColor(Color(1,1,1,1,partialRo,partialGo,partialBo))
+    end   
+    floorColorPulseCounter = floorColorPulseCounter + 1.0
+end
+
+function ColorPulseOnUpdate()
+    if floorColorPulseCounter == nil or floorColorPulseDuration == nil then
+        return
+    end
+    --reset back to nil when done
+    if floorColorPulseCounter == floorColorPulseDuration then
+        floorColorPulseCounter = nil
+        floorColorPulseDuration = nil
+    else
+        FloorColorPulse()
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, ColorPulseOnUpdate)
+
+function ColorPulseCancelOnChangeRoom()
+    if floorColorPulseCounter == nil or floorColorPulseDuration == nil then
+        return
+    end
+    floorColorPulseCounter = nil
+    floorColorPulseDuration = nil
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, ColorPulseCancelOnChangeRoom)
 
 --JERA?: get a weighted random improved coin type
 function GetRefinedCoin()
@@ -341,27 +390,47 @@ function GetRefinedKey()
     return KeySubType.KEY_NORMAL, PickupVariant.PICKUP_KEY
 end
 
+--EHWAZ?: spawns a fool card in the black market so the player can get out
+function Runes:OnEnterBlackMarket()
+    if shouldSpawnReturnCard then
+        shouldSpawnReturnCard = false
+
+        local player = Isaac.GetPlayer(0)
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_FOOL, player.Position + Vector(0, 40), Vector(0,0), nil)
+    end 
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.OnEnterBlackMarket)
+
 --DAGAZ?: get a random curse that isn't already in effect
 function GetRandomCurse()
-    local curses = {
-        LevelCurse.CURSE_OF_DARKNESS,
-        LevelCurse.CURSE_OF_THE_LOST,
-        LevelCurse.CURSE_OF_THE_UNKNOWN,
-        LevelCurse.CURSE_OF_MAZE,
-        LevelCurse.CURSE_OF_BLIND
-    }
 
     local level = Game():GetLevel()
     local currentCurses = level:GetCurses()
     local newCurse
 
-    repeat newCurse = curses[math.random(#curses)]
-    until newCurse & currentCurses == 0 or currentCurses == 109
+    repeat newCurse = flippedDagazCurses[math.random(#flippedDagazCurses)]
+    until newCurse & currentCurses == 0 or IsAllFlippedDagazCursesPresent() == true
 
     return newCurse
 end
 
---DAGAZ?: returns the number of curses that are currently active.
+--DAGAZ?: returns true if all curses giveable by Dagaz? are already present, false otherwise
+function IsAllFlippedDagazCursesPresent()
+
+    local activeCurses = Game():GetLevel():GetCurses()
+    local numCurses = 0
+    for _, mask in ipairs(flippedDagazCurses) do
+        if (activeCurses & mask) ~= 0 then
+            numCurses = numCurses + 1
+        end
+    end
+    if numCurses == #flippedDagazCurses then
+        return true 
+    end
+end
+
+--DAGAZ?: returns the number of curses that are currently active and the bitvalue of current curses.
 function GetNumActiveCurses()
     local bitMasks = {
         1, 2, 4, 8, 16, 32, 64, 128
@@ -375,6 +444,38 @@ function GetNumActiveCurses()
     end
     return numCurses
 end
+
+--DAGAZ?: finds enemies in the room and applies a random status to them
+function Runes:FlippedDagazActiveOnNewRoom()
+    if flippedDagazActive ~= true or flippedDagazPlayer == nil then
+        return
+    end
+
+    for _, entity in ipairs(Isaac.GetRoomEntities()) do
+        if entity and 
+        entity.IsActiveEnemy and 
+        entity.IsVulnerableEnemy and 
+        entity.Type ~= EntityType.ENTITY_PICKUP and 
+        entity.Type ~= EntityType.ENTITY_SLOT and 
+        entity.Type ~= EntityType.ENTITY_FAMILIAR and 
+        entity.Type ~= EntityType.ENTITY_FAMILIAR and 
+        entity.Type ~= EntityType.ENTITY_ENVIRONMENT and 
+        entity.Type ~= EntityType.ENTITY_EFFECT and 
+        entity.Type ~= EntityType.ENTITY_TEXT then
+            ApplyRandomStatusEffect(entity, flippedDagazPlayer)
+        end
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.FlippedDagazActiveOnNewRoom)
+
+--disables the flippedDagaz Floor-wide effect after changing floor
+function Runes:DisableFlippedDagazOnChangeRoom()
+    flippedDagazActive = false
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.DisableFlippedDagazOnChangeRoom)
+
 --DAGAZ?: apply a random status effect to the enemy. chance to fail decreases with number of active curses
 function ApplyRandomStatusEffect(enemy, source)
 
@@ -399,7 +500,7 @@ function ApplyRandomStatusEffect(enemy, source)
     local randomEffect = statusEffects[effectChosen]
     
 
-    --apply the effect 
+    --apply the effect. chance of applying is 1/(#activeCurses + 1)
     if enemy and randomEffect and (math.random(100) > (1.0/(GetNumActiveCurses() + 1.0))*100.0) then
         randomEffect(enemy, source)
     end
