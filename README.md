@@ -9,7 +9,7 @@ Ehwaz? - teleports Isaac to the Black Market and spawns a 0 - The Fool card to l
 
 Dagaz? - tbd
 
-Ansuz? - tbd
+Ansuz? - reveals the location of the ultra secret room and opens up to 2 special red rooms that are adjacent to the normal map
 
 Perthro? - rerolls item pedestals in the room into a new item from the current room's pool, high chance to reroll into an item of same quality
 
