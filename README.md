@@ -1,7 +1,7 @@
 # flipped-runes
 A mod for The Binding of Isaac: Repentance that adds flipped versions of all 10 runes.
 
-Hagalaz? - tbd
+Hagalaz? - Fills all pits in the room
 
 Jera? - rerolls pennies, bombs, keys, half red hearts and full red hearts into other variants of their specific pickup type
 
