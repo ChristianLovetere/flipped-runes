@@ -41,6 +41,7 @@ end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedJera, flippedJeraID)
 
+--teleports Isaac to the Black Market and spawns a 0 - The Fool card to let him teleport back out of it
 function Runes:UseFlippedEhwaz()
     local game = Game()
     local level = game:GetLevel()
@@ -71,6 +72,39 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.OnEnterBlackMarket)
 
+--adds a random curse to the current floor
+function Runes:UseFlippedDagaz(card, player, flags)
+    local level = Game():GetLevel()
+    local newCurse = GetRandomCurse()
+    level:AddCurse(newCurse, false)
+    Runes.isFlippedDagazActive = true
+    Runes.Player = player
+end
+
+mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedDagaz, flippedDagazID)
+
+function Runes:OnNewRoomFlippedDagazActive()
+    if Runes.isFlippedDagazActive ~= true or Runes.Player == nil then
+        return
+    end
+
+    for _, entity in ipairs(Isaac.GetRoomEntities()) do
+        if entity and entity.IsActiveEnemy and entity.IsVulnerableEnemy and entity.Type >= EntityType.ENTITY_GAPER and entity.Type <= EntityType.ENTITY_BEAST then
+            ApplyRandomStatusEffect(entity, Runes.Player)
+        end
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.OnNewRoomFlippedDagazActive)
+
+function Runes:DisableFlippedDagaz()
+    Runes.isFlippedDagazActive = false
+    print("isFlippedDagazActive: " .. tostring(Runes.isFlippedDagazActive))
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.DisableFlippedDagaz)
+
+--redesign
 function Runes:UseFlippedAnsuz()
 
     Runes.toggleSpecialRedRoomSearch = true
@@ -81,91 +115,13 @@ function Runes:UseFlippedAnsuz()
     --if usr exists, reveal it on map
     if ultraSecretIndex and ultraSecretIndex ~= -1 then
         level:GetRoomByIdx(ultraSecretIndex).DisplayFlags = 100
-        level:UpdateVisibility()
     end
-
-    Runes.specialRedRoomsFound = 0        
+    
+    level:ApplyBlueMapEffect()
+    level:UpdateVisibility()      
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAnsuz, flippedAnsuzID)
-
---remove red doors that dont lead to special red rooms and increment specialRedRoomsFound when special red rooms are found
-function Runes:OnFlippedAnsuzNewRoom() 
-    print("special rooms found: " .. tostring(Runes.specialRedRoomsFound))
-    --do nothing if we're not still searching for special red rooms
-    if Runes.toggleSpecialRedRoomSearch == false or Runes.toggleSpecialRedRoomSearch == nil then
-        return
-    end
-    local currentRoom = Game():GetRoom()
-    local level = Game():GetLevel()
-    local currentRoomIndex = level:GetCurrentRoomIndex()
-    --local currentRoomDesc = level:GetRoomByIdx(currentRoomIndex)
-    
-    local isCurrentRoomSpecial = IsRoomSpecial(currentRoom)
-
-    local redRoomsToAttemptOpening = {}
-
-    for i = 0, DoorSlot.NUM_DOOR_SLOTS - 1 do
-        local isAllowed = currentRoom:IsDoorSlotAllowed(i) -- Check if this slot can have a door
-        local door = currentRoom:GetDoor(i) -- Get the actual door object if it exists
-
-        if isAllowed and not door then
-            --print("Door slot", i, "is allowed.")
-            table.insert(redRoomsToAttemptOpening, i)
-        else
-            --print("Door slot", i, "is NOT allowed.")
-        end
-    end
-
-    for i = 1, #redRoomsToAttemptOpening do
-        level:MakeRedRoomDoor(currentRoomIndex, redRoomsToAttemptOpening[i])
-    end
-
-    local rooms = level:GetRooms()
-
-    if Runes.redSpecialRoomsAlreadyFound == nil then
-        Runes.redSpecialRoomsAlreadyFound = {} 
-    end
-
-    for i = 0, rooms.Size - 1 do
-        local roomDesc = level:GetRooms():Get(i)
-        if Runes.specialRedRoomsFound >= 2 then
-            Runes.toggleSpecialRedRoomSearch = false
-            break
-        end
-        local roomConfig = roomDesc.Data
-        local roomType = roomConfig.Type
-        if (roomDesc.Flags & RoomDescriptor.FLAG_RED_ROOM) ~= 0 then
-            if IsRoomSpecial(roomType) and ListHasItem(Runes.redSpecialRoomsAlreadyFound, roomDesc.SafeGridIndex) == false then
-                --print("found a special red room")
-                Runes.specialRedRoomsFound = Runes.specialRedRoomsFound + 1
-                print("adding room " .. tostring(roomDesc.SafeGridIndex) .. " to list")
-                table.insert(Runes.redSpecialRoomsAlreadyFound, roomDesc.SafeGridIndex)
-            elseif not IsRoomSpecial(roomType) then
-                local displacementFromCurrentRoom = roomDesc.SafeGridIndex - currentRoomIndex
-                local doorToClose = GetDoorFromLocalGrid(displacementFromCurrentRoom)
-                if doorToClose ~= nil then
-                    --currentRoom:RemoveDoor(doorToClose)  
-                    roomConfig.Type = RoomType.ROOM_TREASURE
-                end
-
-            end
-        end
-        
-    end        
-    level:UpdateVisibility()
-    print("Current list contents:", table.concat(Runes.redSpecialRoomsAlreadyFound, ", "))
-end
-
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.OnFlippedAnsuzNewRoom)
-
-function Runes:OnFlippedAnsuzNewFloor()
-    Runes.toggleSpecialRedRoomSearch = false
-    Runes.redSpecialRoomsAlreadyFound = {}
-    Runes.specialRedRoomsFound = 0
-end
-
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.OnFlippedAnsuzNewFloor)
 
 --add poof fx
 --change max loops
@@ -385,57 +341,68 @@ function GetRefinedKey()
     return KeySubType.KEY_NORMAL, PickupVariant.PICKUP_KEY
 end
 
---ANSUZ?: return true if room is special and false if it isn't
-function IsRoomSpecial(roomType)
-
-    --excludes dice, miniboss, challenges, dirty bedroom
-    local specialRoomTypes = {
-        [RoomType.ROOM_TREASURE] = true,
-        [RoomType.ROOM_SHOP] = true,
-        [RoomType.ROOM_SECRET] = true,
-        [RoomType.ROOM_SUPERSECRET] = true,
-        [RoomType.ROOM_ARCADE] = true,
-        [RoomType.ROOM_PLANETARIUM] = true,
-        [RoomType.ROOM_LIBRARY] = true,
-        [RoomType.ROOM_DEVIL] = true,
-        [RoomType.ROOM_ANGEL] = true,
-        [RoomType.ROOM_ISAACS] = true,
-        [RoomType.ROOM_SACRIFICE] = true,
-        [RoomType.ROOM_CURSE] = true,
-        [RoomType.ROOM_CHEST] = true,
+--DAGAZ?: get a random curse that isn't already in effect
+function GetRandomCurse()
+    local curses = {
+        LevelCurse.CURSE_OF_DARKNESS,
+        LevelCurse.CURSE_OF_THE_LOST,
+        LevelCurse.CURSE_OF_THE_UNKNOWN,
+        LevelCurse.CURSE_OF_MAZE,
+        LevelCurse.CURSE_OF_BLIND
     }
 
-    return specialRoomTypes[roomType] ~= nil
+    local level = Game():GetLevel()
+    local currentCurses = level:GetCurses()
+    local newCurse
+
+    repeat newCurse = curses[math.random(#curses)]
+    until newCurse & currentCurses == 0 or currentCurses == 109
+
+    return newCurse
 end
 
---ANSUZ?: return true if the specified list has the specified item, and false otherwise
-function ListHasItem(list, item)
-    for _, value in ipairs(list) do
-        if value == item then
-            print("list had item " .. tostring(item))
-            return true
+--DAGAZ?: returns the number of curses that are currently active.
+function GetNumActiveCurses()
+    local bitMasks = {
+        1, 2, 4, 8, 16, 32, 64, 128
+    }
+    local activeCurses = Game():GetLevel():GetCurses()
+    local numCurses = 0.0
+    for _, mask in ipairs(bitMasks) do
+        if (activeCurses & mask) ~= 0 then
+            numCurses = numCurses + 1.0
         end
     end
-    print("list didn't have item " .. tostring(item))
-    return false
+    return numCurses
 end
+--DAGAZ?: apply a random status effect to the enemy. chance to fail decreases with number of active curses
+function ApplyRandomStatusEffect(enemy, source)
 
---ANSUZ?: returns the door that corresponds to the local grid given
-function GetDoorFromLocalGrid(grid)
-    local localGridIndicesToDoors = {
-    [-13] = DoorSlot.UP0,
-    [-12] = DoorSlot.UP1,
-    [-1] = DoorSlot.LEFT0,
-    [1] = DoorSlot.RIGHT0,
-    [2] = DoorSlot.RIGHT0,
-    [12] = DoorSlot.LEFT1,
-    [13] = DoorSlot.DOWN0,
-    [14] = DoorSlot.DOWN1,
-    [15] = DoorSlot.RIGHT1,
-    [26] = DoorSlot.DOWN0,
-    [27] = DoorSlot.DOWN1
+    local statusEffects = {
+        function(e, s) e:AddFreeze(EntityRef(s), 180) end,
+        function(e, s) e:AddPoison(EntityRef(s), 180, Game():GetLevel():GetStage()*3.5) end,
+        function(e, s) e:AddSlowing(EntityRef(s), 300, 0.5, Color(.5,.5,.5,1,0,0,0)) end,
+        function(e, s) e:AddCharmed(EntityRef(s), 600) end,
+        function(e, s) e:AddConfusion(EntityRef(s), 300, true) end,
+        function(e, s) e:AddFear(EntityRef(s), 300) end,
+        function(e, s) e:AddBurn(EntityRef(s), 120, Game():GetLevel():GetStage()*1.75) end,
+        function(e, s) e:AddMidasFreeze(EntityRef(s), 300) end
     }
-    return localGridIndicesToDoors[grid]
+    local midasIndex = #statusEffects
+    --select a random effect
+    local effectChosen = math.random(#statusEffects)
+    --60% chance to reroll effect if midas is chosen
+    if effectChosen == midasIndex and math.random(100) < 60 then
+        effectChosen = math.random(#statusEffects)
+    end
+
+    local randomEffect = statusEffects[effectChosen]
+    
+
+    --apply the effect 
+    if enemy and randomEffect and (math.random(100) > (1.0/(GetNumActiveCurses() + 1.0))*100.0) then
+        randomEffect(enemy, source)
+    end
 end
 
 --PERTHRO?: attempts to find an item with same quality from the current room's pool
@@ -643,28 +610,20 @@ function GetCollectibleFromFamiliar(familiar)
     return familiarToCollectible[familiarVar]
 end
 
---change to list
 --BLANK RUNE?: return flipped rune id based on the id of the normal rune
 function GetFlippedIdFromNormal(subType)
-    if subType == Card.RUNE_HAGALAZ then
-        return flippedHagalazID
-    elseif subType == Card.RUNE_JERA then
-        return flippedJeraID
-    elseif subType == Card.RUNE_EHWAZ then
-        return flippedEhwazID
-    elseif subType == Card.RUNE_DAGAZ then
-        return flippedDagazID
-    elseif subType == Card.RUNE_ANSUZ then
-        return flippedAnsuzID
-    elseif subType == Card.RUNE_PERTHRO then
-        return flippedPerthroID
-    elseif subType == Card.RUNE_BERKANO then
-        return flippedBerkanoID
-    elseif subType == Card.RUNE_ALGIZ then
-        return flippedAlgizID
-    elseif subType == Card.RUNE_BLANK then
-        return flippedBlankID
-    elseif subType == Card.RUNE_BLACK then
-        return flippedBlackID
-    end
+
+    local subTypeToFlippedRuneIdMap = {
+        [Card.RUNE_HAGALAZ] = flippedHagalazID,
+        [Card.RUNE_JERA] = flippedJeraID,
+        [Card.RUNE_EHWAZ] = flippedEhwazID,
+        [Card.RUNE_DAGAZ] = flippedDagazID,
+        [Card.RUNE_ANSUZ] = flippedAnsuzID,
+        [Card.RUNE_PERTHRO] = flippedPerthroID,
+        [Card.RUNE_BERKANO] = flippedBerkanoID,
+        [Card.RUNE_ALGIZ] = flippedAlgizID,
+        [Card.RUNE_BLANK] = flippedBlankID,
+        [Card.RUNE_BLACK] = flippedBlackID
+    }
+    return subTypeToFlippedRuneIdMap[subType]
 end
