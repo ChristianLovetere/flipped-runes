@@ -14,7 +14,7 @@ local flippedBlankID = Isaac.GetCardIdByName("Blank Rune?")
 local flippedBlackID = Isaac.GetCardIdByName("Black Rune?")
 local crackedFlippedBlackID = Isaac.GetCardIdByName("Black Rune..?")
 local brokenFlippedBlackID = Isaac.GetCardIdByName("Black Rune...")
-local shiningFlippedBlackID = Isaac.GetCardIdByName("Black Rune!")
+local shiningFlippedBlackID = Isaac.GetCardIdByName("Black Rune!?")
 
 --Hagalaz? globals
 local floorColorPulseCounter = nil
@@ -35,8 +35,9 @@ local flippedDagazCurses = {
     LevelCurse.CURSE_OF_BLIND
 }
 
---coroutine globals
+--misc globals
 local activeCoroutines = {}
+local sfx = SFXManager()
 
 function Runes:UseFlippedHagalaz()
     local room = Game():GetRoom()
@@ -250,15 +251,61 @@ end
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBlank, flippedBlankID)
 
 function Runes:UseFlippedBlack(card, player, flags)
-    player:AddCard(flippedBlackID)
 
-    Isaac.Explode(player.Position, player, 100)
-    DoBombRing(player, BombVariant.BOMB_MR_MEGA, 5, 5, 70)
-    DelayFunc(5, DoBombRing, player, BombVariant.BOMB_NORMAL, 5, 6, 60, 24)
-    DelayFunc(10, DoBombRing, player, BombVariant.BOMB_SMALL, 5, 7, 45, 48)
+    local spawnablePickups = {
+        {PickupVariant.PICKUP_COIN, 0},
+        {PickupVariant.PICKUP_BOMB, BombSubType.BOMB_NORMAL},
+        {PickupVariant.PICKUP_GRAB_BAG, SackSubType.SACK_NORMAL},
+        {PickupVariant.PICKUP_KEY, 0}
+    }
+    
+    SpawnPickups(player.Position, math.random(2,3), 2, spawnablePickups)
+    DegradeFlippedBlackRune(player, flippedBlackID, crackedFlippedBlackID, 60)
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBlack, flippedBlackID)
+
+function Runes:UseCrackedFlippedBlack(card, player, flags)
+
+    local spawnablePickups = {
+        {PickupVariant.PICKUP_TAROTCARD, 0},
+        {PickupVariant.PICKUP_PILL, 0},
+        {PickupVariant.PICKUP_LIL_BATTERY, 0}
+    }
+    
+    SpawnPickups(player.Position, math.random(2,3), 2, spawnablePickups)
+    DegradeFlippedBlackRune(player, crackedFlippedBlackID, brokenFlippedBlackID, 50)
+end
+
+mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseCrackedFlippedBlack, crackedFlippedBlackID)
+
+function Runes:UseBrokenFlippedBlack(card, player, flags)
+
+    DegradeFlippedBlackRune(player, brokenFlippedBlackID, shiningFlippedBlackID, 40)
+end
+
+mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseBrokenFlippedBlack, brokenFlippedBlackID)
+
+function Runes:UseShiningFlippedBlack(card, player, flags)
+
+    
+    if math.random(100) < 30 then
+        player:AddCard(shiningFlippedBlackID)
+        SpawnRockBreakEffect(player.Position, 6, 1)
+    else
+        Isaac.Explode(player.Position, player, 100)
+        SpawnRockBreakEffect(player.Position, 10, 2)
+        DoBombRing(player, BombVariant.BOMB_MR_MEGA, 5, 5, 70)
+        DelayFunc(5, SpawnRockBreakEffect, player.Position, 10, 1.5)
+        DelayFunc(5, DoBombRing, player, BombVariant.BOMB_NORMAL, 5, 6, 60, 24)
+        DelayFunc(10, SpawnRockBreakEffect, player.Position, 10, 1)
+        DelayFunc(10, DoBombRing, player, BombVariant.BOMB_SMALL, 5, 7, 45, 48)
+        Game():ShakeScreen(20)
+    end
+    sfx:Play(SoundEffect.SOUND_ROCK_CRUMBLE)
+end
+
+mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseShiningFlippedBlack, shiningFlippedBlackID)
 
 function InitFloorColorPulse(ro, go, bo, duration)
     
@@ -746,6 +793,19 @@ function GetFlippedIdFromNormal(subType)
     return subTypeToFlippedRuneIdMap[subType]
 end
 
+--BLACK RUNE?: generic function for first 3 black rune variants
+function DegradeFlippedBlackRune(player, currentRuneID, nextRuneID, recycleChance)
+
+    if math.random(100) < recycleChance then
+        player:AddCard(currentRuneID)
+    else
+        player:AddCard(nextRuneID)
+    end
+    sfx:Play(SoundEffect.SOUND_ROCK_CRUMBLE)
+    SpawnRockBreakEffect(player.Position, 6, 1)
+    SpawnGlowEffect(player.Position)
+end
+
 --BLACK RUNE?: big ring of explosions
 function DoBombRing(player, bombVariant, numBombs, speed, spawnRadius, angleOffset)
     angleOffset = angleOffset or 0
@@ -756,22 +816,69 @@ function DoBombRing(player, bombVariant, numBombs, speed, spawnRadius, angleOffs
         local bombVelocity = Vector(math.cos(angle), math.sin(angle)) * speed
         Isaac.Spawn(EntityType.ENTITY_BOMB, bombVariant, 0, bombPos, bombVelocity, player)
     end
-    Game():ShakeScreen(20)
 end
 
---BLACK RUNE?: prevent cracked Black Rune?s from spawning
-function RerollCrackedBlackRunes()
+--BLACK RUNE?: prevent cracked, broken, and shining Black Rune?s from spawning naturally
+function DeleteCrackedBlackRunes()
     for _, entity in ipairs(Isaac.GetRoomEntities()) do
         if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_TAROTCARD then
             local pickup = entity:ToPickup()
             if pickup and (pickup.SubType == crackedFlippedBlackID or pickup.SubType == brokenFlippedBlackID or pickup.SubType == shiningFlippedBlackID) then
-                pickup:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_RANDOM)
+                pickup:Remove()
+                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.BOMB_CRATER, 0, pickup.Position, Vector(0,0), nil)
             end
         end
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, RerollCrackedBlackRunes)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, DeleteCrackedBlackRunes)
+
+--BLACK RUNE?: calls SelfDestructCrackedBlackRunes with a delay so the rune appears to explode when it hits the ground
+function DelaySelfDestructCrackedBlackRunes()
+    DelayFunc(25, SelfDestructCrackedBlackRunes)
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_PICKUP_INIT, DelaySelfDestructCrackedBlackRunes)
+
+--BLACK RUNE?: explodes and destroys cracked, broken, and shining Black Rune?s on being dropped on the ground
+function SelfDestructCrackedBlackRunes()
+    for _, entity in ipairs(Isaac.GetRoomEntities()) do
+        if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_TAROTCARD then
+            local pickup = entity:ToPickup()
+            if pickup and (pickup.SubType == crackedFlippedBlackID or pickup.SubType == brokenFlippedBlackID or pickup.SubType == shiningFlippedBlackID) then
+                Isaac.Explode(pickup.Position, pickup, 0)
+                pickup:Remove()
+                SpawnRockBreakEffect(pickup.Position, 30, 2)
+            end
+        end
+    end
+end
+
+--BLACK RUNE?: causes [numPickups] to appear at the player's feet and move outward at [intensity] speed
+function SpawnPickups(position, numPickups, intensity, pickupsList)
+    for i = 1, numPickups do
+        local randomIndex = math.random(#pickupsList)
+        local selectedPickup = pickupsList[randomIndex]
+
+        local pickupVariant = selectedPickup[1]
+        local subType = selectedPickup[2]
+        local velocity = Vector(math.random(-3*intensity, 3*intensity), math.random(-3*intensity, 3*intensity))
+        Isaac.Spawn(EntityType.ENTITY_PICKUP, pickupVariant, subType, position, velocity, nil)
+    end
+end
+
+--BLACK RUNE?: causes [numrocks] particles to appear at the player's feet and move outward at [intensity] speed
+function SpawnRockBreakEffect(position, numRocks, intensity)
+    for i = 1, numRocks do -- Spawn multiple rock fragments
+        local velocity = Vector(math.random(-10*intensity, 10*intensity), math.random(-10*intensity, 10*intensity)) --randomized debris movement
+        Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.ROCK_PARTICLE, 0, position, velocity, nil)
+    end
+end
+
+--BLACK RUNE?: causes a short white glow at position
+function SpawnGlowEffect(position)
+    Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.GROUND_GLOW, 0, position, Vector(0,0), nil)
+end
 
 --GENERIC: given a function and number of frames, call the function after that many frames pass
 function DelayFunc(frames, func, ...)
@@ -780,9 +887,9 @@ function DelayFunc(frames, func, ...)
     local co = coroutine.create(function()
         local startFrame = Game():GetFrameCount()
         while Game():GetFrameCount() < startFrame + frames do
-            coroutine.yield() -- Pause until enough frames pass
+            coroutine.yield() --pause until enough frames pass
         end
-        func(table.unpack(args)) -- Execute function after delay
+        func(table.unpack(args)) --execute function after delay
     end)
 
     table.insert(activeCoroutines, co)
@@ -793,12 +900,11 @@ function ProcessCoroutines()
         local status = coroutine.status(activeCoroutines[i])
 
         if status == "dead" then
-            table.remove(activeCoroutines, i) -- Remove finished coroutine
+            table.remove(activeCoroutines, i) --remove finished coroutine
         else
-            coroutine.resume(activeCoroutines[i]) -- Resume and process coroutine
+            coroutine.resume(activeCoroutines[i]) --resume and process coroutine
         end
     end
 end
 
 mod:AddCallback(ModCallbacks.MC_POST_UPDATE, ProcessCoroutines)
-
