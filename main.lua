@@ -12,6 +12,9 @@ local flippedBerkanoID = Isaac.GetCardIdByName("Berkano?")
 local flippedAlgizID = Isaac.GetCardIdByName("Algiz?")
 local flippedBlankID = Isaac.GetCardIdByName("Blank Rune?")
 local flippedBlackID = Isaac.GetCardIdByName("Black Rune?")
+local crackedFlippedBlackID = Isaac.GetCardIdByName("Black Rune..?")
+local brokenFlippedBlackID = Isaac.GetCardIdByName("Black Rune...")
+local shiningFlippedBlackID = Isaac.GetCardIdByName("Black Rune!")
 
 --Hagalaz? globals
 local floorColorPulseCounter = nil
@@ -31,6 +34,9 @@ local flippedDagazCurses = {
     LevelCurse.CURSE_OF_MAZE,
     LevelCurse.CURSE_OF_BLIND
 }
+
+--coroutine globals
+local activeCoroutines = {}
 
 function Runes:UseFlippedHagalaz()
     local room = Game():GetRoom()
@@ -242,6 +248,17 @@ function Runes:UseFlippedBlank()
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBlank, flippedBlankID)
+
+function Runes:UseFlippedBlack(card, player, flags)
+    player:AddCard(flippedBlackID)
+
+    Isaac.Explode(player.Position, player, 100)
+    DoBombRing(player, BombVariant.BOMB_MR_MEGA, 5, 5, 70)
+    DelayFunc(5, DoBombRing, player, BombVariant.BOMB_NORMAL, 5, 6, 60, 24)
+    DelayFunc(10, DoBombRing, player, BombVariant.BOMB_SMALL, 5, 7, 45, 48)
+end
+
+mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBlack, flippedBlackID)
 
 function InitFloorColorPulse(ro, go, bo, duration)
     
@@ -728,3 +745,60 @@ function GetFlippedIdFromNormal(subType)
     }
     return subTypeToFlippedRuneIdMap[subType]
 end
+
+--BLACK RUNE?: big ring of explosions
+function DoBombRing(player, bombVariant, numBombs, speed, spawnRadius, angleOffset)
+    angleOffset = angleOffset or 0
+
+    for i = 1, numBombs do
+        local angle = math.rad((i - 1) * (360/numBombs) + angleOffset)
+        local bombPos = player.Position + Vector(math.cos(angle), math.sin(angle)) * spawnRadius
+        local bombVelocity = Vector(math.cos(angle), math.sin(angle)) * speed
+        Isaac.Spawn(EntityType.ENTITY_BOMB, bombVariant, 0, bombPos, bombVelocity, player)
+    end
+    Game():ShakeScreen(20)
+end
+
+--BLACK RUNE?: prevent cracked Black Rune?s from spawning
+function RerollCrackedBlackRunes()
+    for _, entity in ipairs(Isaac.GetRoomEntities()) do
+        if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_TAROTCARD then
+            local pickup = entity:ToPickup()
+            if pickup and (pickup.SubType == crackedFlippedBlackID or pickup.SubType == brokenFlippedBlackID or pickup.SubType == shiningFlippedBlackID) then
+                pickup:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_RANDOM)
+            end
+        end
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, RerollCrackedBlackRunes)
+
+--GENERIC: given a function and number of frames, call the function after that many frames pass
+function DelayFunc(frames, func, ...)
+    local args = {...}
+
+    local co = coroutine.create(function()
+        local startFrame = Game():GetFrameCount()
+        while Game():GetFrameCount() < startFrame + frames do
+            coroutine.yield() -- Pause until enough frames pass
+        end
+        func(table.unpack(args)) -- Execute function after delay
+    end)
+
+    table.insert(activeCoroutines, co)
+end
+
+function ProcessCoroutines()
+    for i = #activeCoroutines, 1, -1 do
+        local status = coroutine.status(activeCoroutines[i])
+
+        if status == "dead" then
+            table.remove(activeCoroutines, i) -- Remove finished coroutine
+        else
+            coroutine.resume(activeCoroutines[i]) -- Resume and process coroutine
+        end
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, ProcessCoroutines)
+

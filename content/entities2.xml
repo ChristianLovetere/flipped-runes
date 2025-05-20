@@ -7,7 +7,19 @@
         <gibs amount="0" blood="0" bone="0" eye="0" gut="0" large="0" />
 	    <preload-snd id="8" /> 
     </entity>
-    <entity anm2path="flippedRuneBlack.anm2" baseHP="0" boss="0" champion="0" collisionDamage="0" collisionMass="3" collisionRadius="12" friction="1" id="5" name="flippedRune2" numGridCollisionPoints="24" shadowSize="16" stageHP="0" variant="300" subtype="70">
+    <entity anm2path="flippedRuneBlack.anm2" baseHP="0" boss="0" champion="0" collisionDamage="0" collisionMass="3" collisionRadius="12" friction="1" id="5" name="flippedRuneBlack" numGridCollisionPoints="24" shadowSize="16" stageHP="0" variant="300" subtype="70">
+        <gibs amount="0" blood="0" bone="0" eye="0" gut="0" large="0" />
+	    <preload-snd id="8" /> 
+    </entity>
+    <entity anm2path="crackedFlippedRuneBlack.anm2" baseHP="0" boss="0" champion="0" collisionDamage="0" collisionMass="3" collisionRadius="12" friction="1" id="5" name="crackedFlippedRuneBlack" numGridCollisionPoints="24" shadowSize="16" stageHP="0" variant="300" subtype="71">
+        <gibs amount="0" blood="0" bone="0" eye="0" gut="0" large="0" />
+	    <preload-snd id="8" /> 
+    </entity>
+    <entity anm2path="brokenFlippedRuneBlack.anm2" baseHP="0" boss="0" champion="0" collisionDamage="0" collisionMass="3" collisionRadius="12" friction="1" id="5" name="brokenFlippedRuneBlack" numGridCollisionPoints="24" shadowSize="16" stageHP="0" variant="300" subtype="72">
+        <gibs amount="0" blood="0" bone="0" eye="0" gut="0" large="0" />
+	    <preload-snd id="8" /> 
+    </entity>
+    <entity anm2path="shiningFlippedRuneBlack.anm2" baseHP="0" boss="0" champion="0" collisionDamage="0" collisionMass="3" collisionRadius="12" friction="1" id="5" name="shiningFlippedRuneBlack" numGridCollisionPoints="24" shadowSize="16" stageHP="0" variant="300" subtype="73">
         <gibs amount="0" blood="0" bone="0" eye="0" gut="0" large="0" />
 	    <preload-snd id="8" /> 
     </entity>
