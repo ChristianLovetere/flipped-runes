@@ -21,6 +21,9 @@ local floorColorPulseCounter = nil
 local floorColorPulseDuration = nil
 local floorColorPulseRo, floorColorPulseGo, floorColorPulseBo
 
+local roomIndicesWithPitsRemoved = {}
+local hagalazUsedThisFloor = false
+
 --Ehwaz? globals
 local shouldSpawnReturnCard = nil
 
@@ -43,6 +46,11 @@ local activeCoroutines = {}
 local sfx = SFXManager()
 
 function Runes:UseFlippedHagalaz()
+
+    local pitLocations = {}
+
+    local level = Game():GetLevel()
+
     local room = Game():GetRoom()
 
     for i = 0, room:GetGridSize() - 1 do
@@ -50,9 +58,16 @@ function Runes:UseFlippedHagalaz()
         if gridEntity and gridEntity:GetType() == GridEntityType.GRID_PIT then
             room:RemoveGridEntity(i, 0, true)
             Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, room:GetGridPosition(i), Vector(0,0), nil)
+            table.insert(pitLocations, i)
         end
     end
-    
+
+    if #pitLocations == 0 then
+        return
+    end
+
+    hagalazUsedThisFloor = true
+    roomIndicesWithPitsRemoved[level:GetCurrentRoomDesc().GridIndex] = pitLocations
     InitFloorColorPulse(0.355/2,.601/2,.554/2, 60.0)
 end
 
@@ -393,6 +408,36 @@ function ColorPulseCancelOnChangeRoom()
 end
 
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, ColorPulseCancelOnChangeRoom)
+
+--HAGALAZ?: discretely removes pits after walking into a room where Hagalaz? was used previously
+function DiscretelyRemovePits()
+
+    if hagalazUsedThisFloor ~= true then
+        return
+    end
+
+    local pitLocations = roomIndicesWithPitsRemoved[Game():GetLevel():GetCurrentRoomDesc().GridIndex]
+
+    if pitLocations ~= nil then
+        local room = Game():GetRoom()
+
+        for i = 1, #pitLocations do
+            local gridEntity = room:GetGridEntity(pitLocations[i])
+            if gridEntity and gridEntity:GetType() == GridEntityType.GRID_PIT then
+                room:RemoveGridEntity(pitLocations[i], 0, true)
+            end
+        end
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, DiscretelyRemovePits)
+
+function ResetHagalazOnChangeFloor()
+    hagalazUsedThisFloor = false
+    roomIndicesWithPitsRemoved = {}
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, ResetHagalazOnChangeFloor)
 
 --JERA?: get a weighted random improved coin type
 function GetRefinedCoin()
