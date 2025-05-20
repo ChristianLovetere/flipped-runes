@@ -35,6 +35,9 @@ local flippedDagazCurses = {
     LevelCurse.CURSE_OF_BLIND
 }
 
+--Black Rune? globals
+local numRecycles = -1
+
 --misc globals
 local activeCoroutines = {}
 local sfx = SFXManager()
@@ -95,8 +98,6 @@ function Runes:UseFlippedEhwaz()
         --level:ChangeRoom(blackMarketIndex)
         game:StartRoomTransition(blackMarketIndex, Direction.NO_DIRECTION, RoomTransitionAnim.TELEPORT)
         shouldSpawnReturnCard = true
-    else
-        print("No Black Market exists on this floor!")
     end
 end
 
@@ -104,7 +105,7 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedEhwaz, flippedEhwazID)
 
 --adds a random curse and a chance to add status effects to enemies when walking into rooms 
 --for the current floor. The chance for a status effect increases with amount of curses
-function Runes:UseFlippedDagaz(card, player, flags)
+function Runes:UseFlippedDagaz(_, player, _)
     local level = Game():GetLevel()
     local newCurse = GetRandomCurse()
     level:AddCurse(newCurse, false)
@@ -135,14 +136,12 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAnsuz, flippedAnsuzID)
 --change max loops
 --add eid support
 function Runes:UseFlippedPerthro()
-    --print("Using Flipped Perthro!")
     local game = Game()
     local room = game:GetRoom()
     local entities = Isaac.GetRoomEntities()
 
     for _, entity in ipairs(entities) do
         if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_COLLECTIBLE then
-            --print("found pedestal item")
             local itemConfig = Isaac.GetItemConfig() --establish config
             local itemQuality
             local pedestalItem = entity:ToPickup() --obj for the pedestal
@@ -150,12 +149,11 @@ function Runes:UseFlippedPerthro()
             local item = itemConfig:GetCollectible(pedestalItem.SubType) --obj for specific item on the pedestal
             if item then
                 itemQuality = item.Quality --quality of the item
-                --print("Item quality: " .. tostring(itemQuality))
             else
-                --print("Error: Could not retrieve item data for ID " .. tostring(pedestalItem.SubType))
+                print("Error: Could not retrieve item data for ID " .. tostring(pedestalItem.SubType))
             end
         else
-            --print("Error: pedestalItem or its SubType is nil.")
+            print("Error: pedestalItem or its SubType is nil.")
         end
             local itemPoolObj = Game():GetItemPool() --get item pool obj
             local roomType = room:GetType() --get room type
@@ -168,11 +166,10 @@ function Runes:UseFlippedPerthro()
 
             local newItem = GetItemOfQualityFromPool(itemQuality, roomPool)
             if pedestalItem and newItem then
-                --print("new item id: " .. tostring(newItem))
                 pedestalItem:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, newItem)
                 Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, pedestalItem.Position, Vector(0,0), nil)
             else
-                --print("Error: Cannot morph, pedestalItem or newItem is nil.")
+                print("Error: Cannot morph, pedestalItem or newItem is nil.")
             end
         end
     end
@@ -183,7 +180,7 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedPerthro, flippedPerthr
 --add visual effect to killed familiars
 --add eid
 --deletes up to 2 vanilla familiars and turns them into items from the current room's pool
-function Runes:UseFlippedBerkano(card, player, flags)
+function Runes:UseFlippedBerkano(_, player, _)
 
     --find familiars to remove
     local entities = Isaac.GetRoomEntities()
@@ -250,7 +247,7 @@ end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBlank, flippedBlankID)
 
-function Runes:UseFlippedBlack(card, player, flags)
+function Runes:UseFlippedBlack(_, player, _)
 
     local spawnablePickups = {
         {PickupVariant.PICKUP_COIN, 0},
@@ -260,12 +257,14 @@ function Runes:UseFlippedBlack(card, player, flags)
     }
     
     SpawnPickups(player.Position, math.random(2,3), 2, spawnablePickups)
-    DegradeFlippedBlackRune(player, flippedBlackID, crackedFlippedBlackID, 60)
+
+    
+    DegradeFlippedBlackRune(player, flippedBlackID, crackedFlippedBlackID)
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBlack, flippedBlackID)
 
-function Runes:UseCrackedFlippedBlack(card, player, flags)
+function Runes:UseCrackedFlippedBlack(_, player, _)
 
     local spawnablePickups = {
         {PickupVariant.PICKUP_TAROTCARD, 0},
@@ -273,26 +272,58 @@ function Runes:UseCrackedFlippedBlack(card, player, flags)
         {PickupVariant.PICKUP_LIL_BATTERY, 0}
     }
     
-    SpawnPickups(player.Position, math.random(2,3), 2, spawnablePickups)
-    DegradeFlippedBlackRune(player, crackedFlippedBlackID, brokenFlippedBlackID, 50)
+    SpawnPickups(player.Position, math.random(1,3), 3, spawnablePickups)
+    DegradeFlippedBlackRune(player, crackedFlippedBlackID, brokenFlippedBlackID)
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseCrackedFlippedBlack, crackedFlippedBlackID)
 
-function Runes:UseBrokenFlippedBlack(card, player, flags)
+function Runes:UseBrokenFlippedBlack(_, player, _)
 
-    DegradeFlippedBlackRune(player, brokenFlippedBlackID, shiningFlippedBlackID, 40)
+    local spawnablePickups = {
+        {PickupVariant.PICKUP_HEART, 0},
+        {PickupVariant.PICKUP_GRAB_BAG, SackSubType.SACK_BLACK},
+        {PickupVariant.PICKUP_CHEST, 0}
+    }
+
+    SpawnPickups(player.Position, math.random(1,2), 3, spawnablePickups)
+    DegradeFlippedBlackRune(player, brokenFlippedBlackID, shiningFlippedBlackID)
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseBrokenFlippedBlack, brokenFlippedBlackID)
 
-function Runes:UseShiningFlippedBlack(card, player, flags)
+function Runes:UseShiningFlippedBlack(_, player, _)
 
-    
-    if math.random(100) < 30 then
+    local spawnablePickups = {
+        {PickupVariant.PICKUP_TRINKET, 0},
+        {PickupVariant.PICKUP_KEY, KeySubType.KEY_GOLDEN},
+        {PickupVariant.PICKUP_BOMB, BombSubType.BOMB_GOLDEN},
+        {PickupVariant.PICKUP_COIN, CoinSubType.COIN_GOLDEN}
+    }
+
+    if math.random(100) < 15 then
+        local pickupsSpawned = SpawnPickups(player.Position, math.random(2,3), 5, spawnablePickups)
+        for i = 1, #pickupsSpawned do
+            if pickupsSpawned[i]:ToPickup() then
+                local pickup = pickupsSpawned[i]:ToPickup()
+                if pickup.Variant == PickupVariant.PICKUP_TRINKET then
+                    pickup:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TRINKET, pickup.SubType + 0x8000)
+                end
+            end
+        end
+
         player:AddCard(shiningFlippedBlackID)
         SpawnRockBreakEffect(player.Position, 6, 1)
+        sfx:Play(SoundEffect.SOUND_ROCK_CRUMBLE)
+        SpawnGlowEffect(player.Position)
     else
+
+        for _, entity in ipairs(Isaac.GetRoomEntities()) do
+            if entity and IsMonster(entity) then
+                entity:AddBurn(EntityRef(player), 130, Game():GetLevel():GetStage()*3)
+            end
+        end
+
         Isaac.Explode(player.Position, player, 100)
         SpawnRockBreakEffect(player.Position, 10, 2)
         DoBombRing(player, BombVariant.BOMB_MR_MEGA, 5, 5, 70)
@@ -300,9 +331,13 @@ function Runes:UseShiningFlippedBlack(card, player, flags)
         DelayFunc(5, DoBombRing, player, BombVariant.BOMB_NORMAL, 5, 6, 60, 24)
         DelayFunc(10, SpawnRockBreakEffect, player.Position, 10, 1)
         DelayFunc(10, DoBombRing, player, BombVariant.BOMB_SMALL, 5, 7, 45, 48)
+
         Game():ShakeScreen(20)
+        SpawnRedPoofEffect(player.Position)
+
+        sfx:Play(SoundEffect.SOUND_EXPLOSION_STRONG, 2)
+        sfx:Play(SoundEffect.SOUND_PORTAL_OPEN, 2)        
     end
-    sfx:Play(SoundEffect.SOUND_ROCK_CRUMBLE)
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseShiningFlippedBlack, shiningFlippedBlackID)
@@ -327,7 +362,6 @@ function FloorColorPulse()
         local partialGo = floorColorPulseGo * (1 - progress)
         local partialBo = floorColorPulseBo * (1 - progress)
 
-        print("setFloorColor: " .. tostring(partialBo))
         Game():GetRoom():SetFloorColor(Color(1,1,1,1,partialRo,partialGo,partialBo))
     end   
     floorColorPulseCounter = floorColorPulseCounter + 1.0
@@ -374,7 +408,6 @@ function GetRefinedCoin()
     
     for _, coinData in ipairs(coinWeights) do
         if replacementCoin <= coinData[1] then
-            --print("returning coin subtype: " .. tostring(coinData[2]))
             return coinData[2], PickupVariant.PICKUP_COIN
         end
     end
@@ -516,8 +549,8 @@ function Runes:FlippedDagazActiveOnNewRoom()
     end
 
     for _, entity in ipairs(Isaac.GetRoomEntities()) do
-        if entity and 
-        entity.IsActiveEnemy and 
+        if entity and IsMonster(entity)
+        --[[entity.IsActiveEnemy and 
         entity.IsVulnerableEnemy and 
         entity.Type ~= EntityType.ENTITY_PICKUP and 
         entity.Type ~= EntityType.ENTITY_SLOT and 
@@ -525,7 +558,7 @@ function Runes:FlippedDagazActiveOnNewRoom()
         entity.Type ~= EntityType.ENTITY_FAMILIAR and 
         entity.Type ~= EntityType.ENTITY_ENVIRONMENT and 
         entity.Type ~= EntityType.ENTITY_EFFECT and 
-        entity.Type ~= EntityType.ENTITY_TEXT then
+        entity.Type ~= EntityType.ENTITY_TEXT ]]then
             ApplyRandomStatusEffect(entity, flippedDagazPlayer)
         end
     end
@@ -572,7 +605,6 @@ end
 
 --PERTHRO?: attempts to find an item with same quality from the current room's pool
 function GetItemOfQualityFromPool(quality, pool)
-    --print("selected pool type: " .. tostring(pool))
     local rng = RNG()
     rng:SetSeed(Game():GetSeeds():GetStartSeed(), 1)
     local itemPoolObj = Game():GetItemPool()
@@ -580,15 +612,12 @@ function GetItemOfQualityFromPool(quality, pool)
     local count = 0
     while count < 200 do
         item = itemPoolObj:GetCollectible(pool, false, rng:Next()) --pull item from pool
-        --print("pulled item id: " .. tostring(item))
         if item == nil then
-            --print("could not get collectible from pool")
             return nil
         end
         local itemConfig = Isaac.GetItemConfig() --make configobj
         local itemData = itemConfig:GetCollectible(item) --get data of the item
         if itemData == nil then
-            --print("could not get collectible " .. tostring(item))
             return nil
         end
         local itemQuality = itemData.Quality --get quality of the item
@@ -771,7 +800,6 @@ function GetCollectibleFromFamiliar(familiar)
     [FamiliarVariant.TWISTED_BABY] = CollectibleType.COLLECTIBLE_TWISTED_PAIR,
     [FamiliarVariant.WORM_FRIEND] = CollectibleType.COLLECTIBLE_WORM_FRIEND,
     }
-    print("passing in " .. familiarVar)
     return familiarToCollectible[familiarVar]
 end
 
@@ -794,12 +822,17 @@ function GetFlippedIdFromNormal(subType)
 end
 
 --BLACK RUNE?: generic function for first 3 black rune variants
-function DegradeFlippedBlackRune(player, currentRuneID, nextRuneID, recycleChance)
+function DegradeFlippedBlackRune(player, currentRuneID, nextRuneID)
 
-    if math.random(100) < recycleChance then
+    if numRecycles == -1 then
+        numRecycles = math.random(2)
+    end
+    if numRecycles > 0 then
         player:AddCard(currentRuneID)
+        numRecycles = numRecycles - 1
     else
         player:AddCard(nextRuneID)
+        numRecycles = -1
     end
     sfx:Play(SoundEffect.SOUND_ROCK_CRUMBLE)
     SpawnRockBreakEffect(player.Position, 6, 1)
@@ -856,6 +889,9 @@ end
 
 --BLACK RUNE?: causes [numPickups] to appear at the player's feet and move outward at [intensity] speed
 function SpawnPickups(position, numPickups, intensity, pickupsList)
+
+    local pickupsSpawned = {}
+
     for i = 1, numPickups do
         local randomIndex = math.random(#pickupsList)
         local selectedPickup = pickupsList[randomIndex]
@@ -863,8 +899,10 @@ function SpawnPickups(position, numPickups, intensity, pickupsList)
         local pickupVariant = selectedPickup[1]
         local subType = selectedPickup[2]
         local velocity = Vector(math.random(-3*intensity, 3*intensity), math.random(-3*intensity, 3*intensity))
-        Isaac.Spawn(EntityType.ENTITY_PICKUP, pickupVariant, subType, position, velocity, nil)
+        local spawned = Isaac.Spawn(EntityType.ENTITY_PICKUP, pickupVariant, subType, position, velocity, nil)
+        table.insert(pickupsSpawned, spawned)
     end
+    return pickupsSpawned
 end
 
 --BLACK RUNE?: causes [numrocks] particles to appear at the player's feet and move outward at [intensity] speed
@@ -873,6 +911,11 @@ function SpawnRockBreakEffect(position, numRocks, intensity)
         local velocity = Vector(math.random(-10*intensity, 10*intensity), math.random(-10*intensity, 10*intensity)) --randomized debris movement
         Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.ROCK_PARTICLE, 0, position, velocity, nil)
     end
+end
+
+--BLACK RUNE?: causes a short red poof at position
+function SpawnRedPoofEffect(position)
+    Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF02, 0, position, Vector(0,0), nil)
 end
 
 --BLACK RUNE?: causes a short white glow at position
@@ -908,3 +951,18 @@ function ProcessCoroutines()
 end
 
 mod:AddCallback(ModCallbacks.MC_POST_UPDATE, ProcessCoroutines)
+
+function IsMonster(entity)
+    if entity.IsActiveEnemy and 
+    entity.IsVulnerableEnemy and 
+    entity.Type ~= EntityType.ENTITY_PICKUP and 
+    entity.Type ~= EntityType.ENTITY_SLOT and 
+    entity.Type ~= EntityType.ENTITY_FAMILIAR and 
+    entity.Type ~= EntityType.ENTITY_FAMILIAR and 
+    entity.Type ~= EntityType.ENTITY_ENVIRONMENT and 
+    entity.Type ~= EntityType.ENTITY_EFFECT and 
+    entity.Type ~= EntityType.ENTITY_TEXT then
+        return true
+    end
+    return false
+end
