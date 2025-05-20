@@ -19,5 +19,4 @@ Algiz? - tbd
 
 Blank Rune? - converts all rune pickups in the room into their flipped variants
 
-Black Rune? - tbd
-
+Black Rune? - creates a wide variety of pickups and is highly volatile!

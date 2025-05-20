@@ -108,7 +108,8 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedEhwaz, flippedEhwazID)
 function Runes:UseFlippedDagaz(_, player, _)
     local level = Game():GetLevel()
     local newCurse = GetRandomCurse()
-    level:AddCurse(newCurse, false)
+    level:AddCurse(newCurse, true)
+    Game():ShakeScreen(10)
     flippedDagazActive = true
     flippedDagazPlayer = player
 end
@@ -316,6 +317,7 @@ function Runes:UseShiningFlippedBlack(_, player, _)
         SpawnRockBreakEffect(player.Position, 6, 1)
         sfx:Play(SoundEffect.SOUND_ROCK_CRUMBLE)
         SpawnGlowEffect(player.Position)
+        Game():ShakeScreen(7)
     else
 
         for _, entity in ipairs(Isaac.GetRoomEntities()) do
@@ -834,6 +836,7 @@ function DegradeFlippedBlackRune(player, currentRuneID, nextRuneID)
         player:AddCard(nextRuneID)
         numRecycles = -1
     end
+    Game():ShakeScreen(7)
     sfx:Play(SoundEffect.SOUND_ROCK_CRUMBLE)
     SpawnRockBreakEffect(player.Position, 6, 1)
     SpawnGlowEffect(player.Position)
@@ -958,8 +961,9 @@ function IsMonster(entity)
     entity.Type ~= EntityType.ENTITY_PICKUP and 
     entity.Type ~= EntityType.ENTITY_SLOT and 
     entity.Type ~= EntityType.ENTITY_FAMILIAR and 
-    entity.Type ~= EntityType.ENTITY_FAMILIAR and 
+    entity.Type ~= EntityType.ENTITY_PLAYER and 
     entity.Type ~= EntityType.ENTITY_ENVIRONMENT and 
+    entity.Type ~= EntityType.ENTITY_BOMB and
     entity.Type ~= EntityType.ENTITY_EFFECT and 
     entity.Type ~= EntityType.ENTITY_TEXT then
         return true
