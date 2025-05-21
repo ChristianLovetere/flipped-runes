@@ -1,6 +1,6 @@
 <pocketitems>
     <card type="rune" pickup="68" achievement="89" hud="Hagalaz?" name="Hagalaz?" description="Foundation" mimiccharge="4" />
-    <card type="rune" pickup="68" achievement="90" hud="Jera?" name="Jera?" description="Refinement" mimiccharge="8" />
+    <card type="rune" pickup="68" achievement="90" hud="Jera?" name="Jera?" description="Refinement" mimiccharge="4" />
     <card type="rune" pickup="68" achievement="91" hud="Ehwaz?" name="Ehwaz?" description="Contraband" mimiccharge="4" />
     <card type="rune" pickup="68" achievement="92" hud="Dagaz?" name="Dagaz?" description="Affliction" mimiccharge="3" />
     <card type="rune" pickup="69" achievement="93" hud="Ansuz?" name="Ansuz?" description="Knowledge" mimiccharge="6" />
