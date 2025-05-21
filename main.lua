@@ -2,6 +2,8 @@ FlippedRunes = RegisterMod("Flipped Runes", 1)
 local mod = FlippedRunes
 local Runes = {}
 
+include("unstackableVanillaItems")
+
 local flippedHagalazID = Isaac.GetCardIdByName("Hagalaz?")
 local flippedJeraID = Isaac.GetCardIdByName("Jera?")
 local flippedEhwazID = Isaac.GetCardIdByName("Ehwaz?")
@@ -50,6 +52,8 @@ local sfx = SFXManager()
 --mySprite:Load("gfx/eid_inline_icons.anm2", true)
 --local myCardID = Isaac.GetCardIdByName ("My new Card")
 --EID:addIcon("Card"..myCardID, "myNewCard", -1, 9, 9, -1, 0, mySprite)
+
+print(tostring(CollectibleIsStackable(708)))
 
 if EID then
     EID:addCard(flippedHagalazID, "Fills all pits in the room#Pits stay filled even if the room is exited", "Hagalaz?", "en_us")
