@@ -2,14 +2,14 @@
     <card type="rune" pickup="68" achievement="89" hud="Hagalaz?" name="Hagalaz?" description="Foundation" mimiccharge="4" />
     <card type="rune" pickup="68" achievement="90" hud="Jera?" name="Jera?" description="Refinement" mimiccharge="8" />
     <card type="rune" pickup="68" achievement="91" hud="Ehwaz?" name="Ehwaz?" description="Contraband" mimiccharge="4" />
-    <card type="rune" pickup="68" achievement="92" hud="Dagaz?" name="Dagaz?" description="Affliction" mimiccharge="1" />
+    <card type="rune" pickup="68" achievement="92" hud="Dagaz?" name="Dagaz?" description="Affliction" mimiccharge="3" />
     <card type="rune" pickup="69" achievement="93" hud="Ansuz?" name="Ansuz?" description="Knowledge" mimiccharge="6" />
     <card type="rune" pickup="69" achievement="94" hud="Perthro?" name="Perthro?" description="Similarity" mimiccharge="6" />
     <card type="rune" pickup="69" achievement="95" hud="Berkano?" name="Berkano?" description="Sacrifice" mimiccharge="12" />
     <card type="rune" pickup="69" achievement="96" hud="Algiz?" name="Algiz?" description="tbd" mimiccharge="6" />
     <card type="rune" pickup="69" achievement="233" hud="Blank Rune?" name="Blank Rune?" description="Conversion" mimiccharge="6" />
-    <card type="rune" pickup="70" achievement="309" hud="Black Rune?" name="Black Rune?" description="Creation" mimiccharge="-1" />
-    <card type="rune" pickup="71" achievement="309" hud="Black Rune..?" name="Black Rune..?" description="Volatility" mimiccharge="-1" />
-    <card type="rune" pickup="72" achievement="309" hud="Black Rune..." name="Black Rune..." description="Volatility" mimiccharge="-1" />
-    <card type="rune" pickup="73" achievement="309" hud="Black Rune!?" name="Black Rune!?" description="???" mimiccharge="-1" />
+    <card type="object" pickup="70" achievement="309" hud="Black Rune?" name="Black Rune?" description="Creation" mimiccharge="0" />
+    <card type="object" pickup="71" achievement="309" hud="Black Rune..?" name="Black Rune..?" description="Volatility" mimiccharge="0" />
+    <card type="object" pickup="72" achievement="309" hud="Black Rune..." name="Black Rune..." description="Volatility" mimiccharge="0" />
+    <card type="object" pickup="73" achievement="309" hud="Black Rune!?" name="Black Rune!?" description="???" mimiccharge="0" />
 </pocketitems>

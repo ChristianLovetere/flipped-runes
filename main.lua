@@ -37,6 +37,7 @@ local flippedDagazCurses = {
     LevelCurse.CURSE_OF_MAZE,
     LevelCurse.CURSE_OF_BLIND
 }
+local activeCurses
 
 --Black Rune? globals
 local numRecycles = -1
@@ -44,6 +45,27 @@ local numRecycles = -1
 --misc globals
 local activeCoroutines = {}
 local sfx = SFXManager()
+
+--local mySprite = Sprite()
+--mySprite:Load("gfx/eid_inline_icons.anm2", true)
+--local myCardID = Isaac.GetCardIdByName ("My new Card")
+--EID:addIcon("Card"..myCardID, "myNewCard", -1, 9, 9, -1, 0, mySprite)
+
+if EID then
+    EID:addCard(flippedHagalazID, "Fills all pits in the room#Pits stay filled even if the room is exited", "Hagalaz?", "en_us")
+    EID:addCard(flippedJeraID, "Rerolls {{Coin}}, {{Bomb}}, {{Key}}, and {{HalfHeart}}/{{Heart}} into other variants of their pickup type", "Jera?", "en_us")
+    EID:addCard(flippedEhwazID, "{{DemonBeggar}} Teleports Isaac to the Black Market#Spawns a {{Card1}} Fool Card inside the Black Market after teleporting", "Ehwaz?", "en_us")
+    EID:addCard(flippedDagazID, "\2 Adds a random {{ColorPurple}}curse{{CR}} to the current floor#\1 For the rest of the floor, enemies have a chance to be debuffed when a room is entered# The chance for a debuff increases with the number of active curses#{{Card35}} Dagaz grants an extra {{HalfSoulHeart}} per curse added", "Dagaz?", "en_us")
+    EID:addCard(flippedAnsuzID, "tbd", "Ansuz?", "en_us")
+    EID:addCard(flippedPerthroID, "tbd", "Perthro?", "en_us")
+    EID:addCard(flippedBerkanoID, "\2 Removes up to 2 vanilla familiars#\1 Spawns an item from the current room's pool for each familiar removed", "Berkano?", "en_us")
+    EID:addCard(flippedAlgizID, "tbd", "Algiz?", "en_us")
+    EID:addCard(flippedBlankID, "{{Rune}} Converts all rune pickups in the room into their flipped variants", "Blank Rune?", "en_us")
+    EID:addCard(flippedBlackID, "Creates a wide variety of pickups#!!! Highly volatile!# Can't be mimicked by#{{Blank}} {{Collectible263}} Clear Rune", "Black Rune?", "en_us")
+    EID:addCard(crackedFlippedBlackID, "Creates 1-3 {{Card}}, {{Pill}}, and {{Battery}}, 2-3 times#!!! Explodes after a short delay when dropped# Can't be mimicked by#{{Blank}} {{Collectible263}} Clear Rune", "Black Rune..?", "en_us")
+    EID:addCard(brokenFlippedBlackID, "Creates 1-2 {{Chest}}, {{BlackSack}}, and {{Heart}}, 2-3 times#!!! Explodes after a short delay when dropped# Can't be mimicked by#{{Blank}} {{Collectible263}} Clear Rune", "Black Rune...", "en_us")
+    EID:addCard(shiningFlippedBlackID, "!!! Likely to explode and spawn bombs around Isaac, lighting enemies ablaze with a high damage burning effect# Small chance to create 2-3 {{ColorYellow}}Trinkets{{CR}}, {{GoldenKey}}, {{GoldenBomb}}, and {{CoinHeart}} instead, without consuming the rune#!!! Explodes after a short delay when dropped#{{Collectible263}} Can't be mimicked by Clear Rune", "Black Rune!?", "en_us")
+end
 
 function Runes:UseFlippedHagalaz()
 
@@ -121,12 +143,17 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedEhwaz, flippedEhwazID)
 --adds a random curse and a chance to add status effects to enemies when walking into rooms 
 --for the current floor. The chance for a status effect increases with amount of curses
 function Runes:UseFlippedDagaz(_, player, _)
+    
     local level = Game():GetLevel()
     local newCurse = GetRandomCurse()
-    level:AddCurse(newCurse, true)
-    Game():ShakeScreen(10)
-    flippedDagazActive = true
-    flippedDagazPlayer = player
+    local allCursesPresent, _ = FlippedDagazCursesPresent()
+    if allCursesPresent ~= true then
+        level:AddCurse(newCurse, true)
+        Game():ShakeScreen(10)
+        flippedDagazActive = true
+        flippedDagazPlayer = player
+        _, activeCurses = FlippedDagazCursesPresent() 
+    end
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedDagaz, flippedDagazID)
@@ -337,7 +364,7 @@ function Runes:UseShiningFlippedBlack(_, player, _)
 
         for _, entity in ipairs(Isaac.GetRoomEntities()) do
             if entity and IsMonster(entity) then
-                entity:AddBurn(EntityRef(player), 130, Game():GetLevel():GetStage()*3)
+                entity:AddBurn(EntityRef(player), 130, Game():GetLevel():GetStage()*8)
             end
         end
 
@@ -553,14 +580,16 @@ function GetRandomCurse()
     local currentCurses = level:GetCurses()
     local newCurse
 
+    local allCursesPresent, _ = FlippedDagazCursesPresent()
+
     repeat newCurse = flippedDagazCurses[math.random(#flippedDagazCurses)]
-    until newCurse & currentCurses == 0 or IsAllFlippedDagazCursesPresent() == true
+    until newCurse & currentCurses == 0 or allCursesPresent == true
 
     return newCurse
 end
 
---DAGAZ?: returns true if all curses giveable by Dagaz? are already present, false otherwise
-function IsAllFlippedDagazCursesPresent()
+--DAGAZ?: returns true if all curses giveable by Dagaz? are already present, false otherwise, also returns number of Dagaz? curses found
+function FlippedDagazCursesPresent()
 
     local activeCurses = Game():GetLevel():GetCurses()
     local numCurses = 0
@@ -570,11 +599,12 @@ function IsAllFlippedDagazCursesPresent()
         end
     end
     if numCurses == #flippedDagazCurses then
-        return true 
+        return true, numCurses
     end
+    return false, numCurses
 end
 
---DAGAZ?: returns the number of curses that are currently active and the bitvalue of current curses.
+--DAGAZ?: returns the number of curses that are currently active
 function GetNumActiveCurses()
     local bitMasks = {
         1, 2, 4, 8, 16, 32, 64, 128
@@ -596,16 +626,7 @@ function Runes:FlippedDagazActiveOnNewRoom()
     end
 
     for _, entity in ipairs(Isaac.GetRoomEntities()) do
-        if entity and IsMonster(entity)
-        --[[entity.IsActiveEnemy and 
-        entity.IsVulnerableEnemy and 
-        entity.Type ~= EntityType.ENTITY_PICKUP and 
-        entity.Type ~= EntityType.ENTITY_SLOT and 
-        entity.Type ~= EntityType.ENTITY_FAMILIAR and 
-        entity.Type ~= EntityType.ENTITY_FAMILIAR and 
-        entity.Type ~= EntityType.ENTITY_ENVIRONMENT and 
-        entity.Type ~= EntityType.ENTITY_EFFECT and 
-        entity.Type ~= EntityType.ENTITY_TEXT ]]then
+        if entity and IsMonster(entity) then
             ApplyRandomStatusEffect(entity, flippedDagazPlayer)
         end
     end
@@ -613,7 +634,7 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.FlippedDagazActiveOnNewRoom)
 
---disables the flippedDagaz Floor-wide effect after changing floor
+--DAGAZ?: disables the floor-wide effect after changing floor
 function Runes:DisableFlippedDagazOnChangeRoom()
     flippedDagazActive = false
 end
@@ -649,6 +670,22 @@ function ApplyRandomStatusEffect(enemy, source)
         randomEffect(enemy, source)
     end
 end
+
+--DAGAZ?: Normal Dagaz grants an extra half soul heart for each curse removed after 1
+function GetSoulHeartsToAddOnUseDagaz(_, player, _)
+    
+    if flippedDagazActive ~= true then
+        return
+    end
+
+    print("adding" .. tostring(activeCurses) .. "halfsoulhearts")
+    Isaac.GetPlayer(0):AddSoulHearts(activeCurses)
+
+    flippedDagazActive = false
+    activeCurses = 0
+end
+
+mod:AddCallback(ModCallbacks.MC_USE_CARD, GetSoulHeartsToAddOnUseDagaz, Card.RUNE_DAGAZ)
 
 --PERTHRO?: attempts to find an item with same quality from the current room's pool
 function GetItemOfQualityFromPool(quality, pool)
