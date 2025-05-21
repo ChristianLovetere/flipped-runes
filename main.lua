@@ -41,10 +41,6 @@ local flippedDagazCurses = {
 }
 local activeCurses
 
---Perthro? globals
---only add to as a map of [playerID] = numCollectibles
-local playerCollectiblesOwned = {}
-
 --Black Rune? globals
 local numRecycles = -1
 
@@ -70,14 +66,14 @@ local numTotalCollectibles = numModdedCollectibles + CollectibleType.NUM_COLLECT
 
 if EID then
     EID:addCard(flippedHagalazID, "Fills all pits in the room#Pits stay filled even if the room is exited", "Hagalaz?", "en_us")
-    EID:addCard(flippedJeraID, "Rerolls {{Coin}}, {{Bomb}}, {{Key}}, and {{HalfHeart}}/{{Heart}} into other variants of their pickup type", "Jera?", "en_us")
+    EID:addCard(flippedJeraID, "Rerolls {{Coin}}, {{Bomb}}, {{Key}}, and {{HalfHeart}}/{{Heart}} into other variants of their pickup type#{{Shop}} Works on pickups that are for sale", "Jera?", "en_us")
     EID:addCard(flippedEhwazID, "{{DemonBeggar}} Teleports Isaac to the Black Market#Spawns a {{Card1}} Fool Card inside the Black Market after teleporting", "Ehwaz?", "en_us")
     EID:addCard(flippedDagazID, "\2 Adds a random {{ColorPurple}}curse{{CR}} to the current floor#\1 For the rest of the floor, enemies have a chance to be debuffed when a room is entered# The chance for a debuff increases with the number of active curses#{{Card35}} Dagaz grants an extra {{HalfSoulHeart}} per curse added", "Dagaz?", "en_us")
     EID:addCard(flippedAnsuzID, "tbd", "Ansuz?", "en_us")
-    EID:addCard(flippedPerthroID, "tbd", "Perthro?", "en_us")
+    EID:addCard(flippedPerthroID, "Rerolls items in the room into items Isaac already owns# Avoids rerolling into vanilla items that have no benefit when duplicated, including active items #{{Blank}} (except {{Collectible297}},{{Collectible515}},{{Collectible490}})# If Isaac has no eligible items, rerolls into a random item from the current room's pool", "Perthro?", "en_us")
     EID:addCard(flippedBerkanoID, "\2 Removes up to 2 vanilla familiars#\1 Spawns an item from the current room's pool for each familiar removed", "Berkano?", "en_us")
     EID:addCard(flippedAlgizID, "tbd", "Algiz?", "en_us")
-    EID:addCard(flippedBlankID, "{{Rune}} Converts all rune pickups in the room into their flipped variants", "Blank Rune?", "en_us")
+    EID:addCard(flippedBlankID, "{{Rune}} Converts all rune pickups in the room into their flipped variants#{{Shop}} Works on runes that are for sale", "Blank Rune?", "en_us")
     EID:addCard(flippedBlackID, "Creates a wide variety of pickups#!!! Highly volatile!# Can't be mimicked by#{{Blank}} {{Collectible263}} Clear Rune", "Black Rune?", "en_us")
     EID:addCard(crackedFlippedBlackID, "Creates 1-3 {{Card}}, {{Pill}}, and {{Battery}}, 2-3 times#!!! Explodes after a short delay when dropped# Can't be mimicked by#{{Blank}} {{Collectible263}} Clear Rune", "Black Rune..?", "en_us")
     EID:addCard(brokenFlippedBlackID, "Creates 1-2 {{Chest}}, {{BlackSack}}, and {{Heart}}, 2-3 times#!!! Explodes after a short delay when dropped# Can't be mimicked by#{{Blank}} {{Collectible263}} Clear Rune", "Black Rune...", "en_us")
@@ -129,7 +125,7 @@ function Runes:UseFlippedJera()
                 refinedPickup, refinedPickupVariant = GetRefinedKey()
             end
             if pickup and refinedPickup and refinedPickupVariant then
-                pickup:Morph(EntityType.ENTITY_PICKUP, refinedPickupVariant, refinedPickup)
+                pickup:Morph(EntityType.ENTITY_PICKUP, refinedPickupVariant, refinedPickup, true)
             end
         end
     end
@@ -190,45 +186,62 @@ end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAnsuz, flippedAnsuzID)
 
---change max loops
---add eid support
+
+--Rerolls items in the room into items the player already owns
+--will generally avoid items that have no benefit when duplicated
 ---@param player EntityPlayer
 function Runes:UseFlippedPerthro(_, player, _)
 
-    local spawnableCollectibles
-    playerCollectiblesOwned[player] = GetPlayerCollectibles(player)
-    spawnableCollectibles = playerCollectiblesOwned[player] 
-    
+    local playerCollectiblesOwned = GetPlayerCollectibles(player)    
 
     local game = Game()
-    local room = game:GetRoom()
     local entities = Isaac.GetRoomEntities()
     local itemConfig = Isaac.GetItemConfig()
+    local rng = RNG()
+    rng:SetSeed(Game():GetSeeds():GetStartSeed(), 1)
 
     for _, entity in ipairs(entities) do
         if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_COLLECTIBLE then
             local collectible = entity:ToPickup()
-            if collectible then
+            if collectible and collectible.SubType ~= CollectibleType.COLLECTIBLE_NULL then
+
+                local eligiblePlayerCollectiblesOwned = {}
+
+                for k, v in pairs(playerCollectiblesOwned) do
+                    eligiblePlayerCollectiblesOwned[k] = v
+                end
+
                 local newItem
-                
-                repeat newItem = math.random(1, #spawnableCollectibles)
-                
-                until not itemConfig:GetCollectible(newItem):HasTags(ItemConfig.TAG_QUEST) and
-                    CollectibleIsStackable(newItem)
-            
-                collectible:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, newItem)
-                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, collectible.Position, Vector(0,0), nil)
+
+                repeat
+                    if #eligiblePlayerCollectiblesOwned == 0 then
+                        local itemPoolObj = Game():GetItemPool()
+                        local roomType = Game():GetRoom():GetType()
+                        local roomPool = itemPoolObj:GetPoolForRoom(roomType, rng:Next())
+                        if roomPool == -1 then
+                            roomPool = 0
+                        end
+
+                        newItem = itemPoolObj:GetCollectible(roomPool, true, rng:Next())
+                        break
+                    end
+
+                    local randomIndex = math.random(1, #eligiblePlayerCollectiblesOwned)
+
+                    newItem = eligiblePlayerCollectiblesOwned[randomIndex]
+                    table.remove(eligiblePlayerCollectiblesOwned, randomIndex)
+
+                until newItem and (not itemConfig:GetCollectible(newItem):HasTags(ItemConfig.TAG_QUEST)) and CollectibleIsStackable(newItem)
+
+                collectible:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, newItem, true)
+                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, collectible.Position, Vector(0,0), nil)               
             end
         end
     end
-
-    playerCollectiblesOwned[player] = nil
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedPerthro, flippedPerthroID)
 
---add visual effect to killed familiars
---add eid
 --deletes up to 2 vanilla familiars and turns them into items from the current room's pool
 function Runes:UseFlippedBerkano(_, player, _)
 
@@ -280,6 +293,11 @@ end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBerkano, flippedBerkanoID)
 
+function Runes:UseFlippedAlgiz(_, player, _)
+
+end
+
+mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAlgiz, flippedAlgizID)
 
 --turns all runes on the ground in the room into flipped variant
 function Runes:UseFlippedBlank()
@@ -288,7 +306,7 @@ function Runes:UseFlippedBlank()
         if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_TAROTCARD then
             local pickup = entity:ToPickup()
             if pickup and (pickup.SubType >= Card.RUNE_HAGALAZ and pickup.SubType <= Card.RUNE_BLACK) then
-                pickup:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, GetFlippedIdFromNormal(pickup.SubType))
+                pickup:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, GetFlippedIdFromNormal(pickup.SubType), true)
                 Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, pickup.Position, Vector(0,0), nil)
             end
         end
@@ -433,7 +451,7 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_UPDATE, ColorPulseOnUpdate)
 
-function ColorPulseCancelOnChangeRoom()
+function Runes:ColorPulseCancelOnChangeRoom()
     if floorColorPulseCounter == nil or floorColorPulseDuration == nil then
         return
     end
@@ -441,10 +459,10 @@ function ColorPulseCancelOnChangeRoom()
     floorColorPulseDuration = nil
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, ColorPulseCancelOnChangeRoom)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.ColorPulseCancelOnChangeRoom)
 
 --HAGALAZ?: discretely removes pits after walking into a room where Hagalaz? was used previously
-function DiscretelyRemovePits()
+function Runes:DiscretelyRemovePits()
 
     if hagalazUsedThisFloor ~= true then
         return
@@ -464,14 +482,14 @@ function DiscretelyRemovePits()
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, DiscretelyRemovePits)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.DiscretelyRemovePits)
 
-function ResetHagalazOnChangeFloor()
+function Runes:ResetHagalazOnChangeFloor()
     hagalazUsedThisFloor = false
     roomIndicesWithPitsRemoved = {}
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, ResetHagalazOnChangeFloor)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.ResetHagalazOnChangeFloor)
 
 --JERA?: get a weighted random improved coin type
 function GetRefinedCoin()
@@ -679,7 +697,7 @@ function ApplyRandomStatusEffect(enemy, source)
 end
 
 --DAGAZ?: Normal Dagaz grants an extra half soul heart for each curse removed after 1
-function GetSoulHeartsToAddOnUseDagaz(_, player, _)
+function Runes:GetSoulHeartsToAddOnUseDagaz(_, player, _)
     
     if flippedDagazActive ~= true then
         return
@@ -692,7 +710,7 @@ function GetSoulHeartsToAddOnUseDagaz(_, player, _)
     activeCurses = 0
 end
 
-mod:AddCallback(ModCallbacks.MC_USE_CARD, GetSoulHeartsToAddOnUseDagaz, Card.RUNE_DAGAZ)
+mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.GetSoulHeartsToAddOnUseDagaz, Card.RUNE_DAGAZ)
 
 --PERTHRO?: returns a list of all the collectibles the player has
 ---@param player EntityPlayer
@@ -706,9 +724,14 @@ function GetPlayerCollectibles(player)
             for i = 1, amount do
                 table.insert(ownedCollectibles, id)
             end
-            print("added item with id " .. tostring(id) .. " , " .. tostring(amount) .. " times.")
+            --print("added item with id " .. tostring(id) .. " , " .. tostring(amount) .. " times.")
         end
     end
+
+    for i = 1, #ownedCollectibles do
+        print("item: " .. tostring(ownedCollectibles[i]))
+    end
+
     return ownedCollectibles
 end
 
@@ -934,7 +957,7 @@ function DoBombRing(player, bombVariant, numBombs, speed, spawnRadius, angleOffs
 end
 
 --BLACK RUNE?: prevent cracked, broken, and shining Black Rune?s from spawning naturally
-function DeleteCrackedBlackRunes()
+function Runes:DeleteCrackedBlackRunes()
     for _, entity in ipairs(Isaac.GetRoomEntities()) do
         if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_TAROTCARD then
             local pickup = entity:ToPickup()
@@ -946,26 +969,29 @@ function DeleteCrackedBlackRunes()
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, DeleteCrackedBlackRunes)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.DeleteCrackedBlackRunes)
 
---BLACK RUNE?: calls SelfDestructCrackedBlackRunes with a delay so the rune appears to explode when it hits the ground
-function DelaySelfDestructCrackedBlackRunes()
-    DelayFunc(25, SelfDestructCrackedBlackRunes)
+function Runes:RerollCrackedBlackRunes(_, card, _, _)
+    if card == crackedFlippedBlackID or card == brokenFlippedBlackID or card == shiningFlippedBlackID then
+        return GetRandomRune()
+    end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_PICKUP_INIT, DelaySelfDestructCrackedBlackRunes)
+mod:AddCallback(ModCallbacks.MC_GET_CARD, Runes.RerollCrackedBlackRunes)
+
+--BLACK RUNE?: calls SelfDestructCrackedBlackRunes with a delay so the rune appears to explode when it hits the ground
+function Runes:DelaySelfDestructCrackedBlackRunes(pickup)
+    DelayFunc(25, SelfDestructCrackedBlackRunes, pickup)
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_PICKUP_INIT, Runes.DelaySelfDestructCrackedBlackRunes)
 
 --BLACK RUNE?: explodes and destroys cracked, broken, and shining Black Rune?s on being dropped on the ground
-function SelfDestructCrackedBlackRunes()
-    for _, entity in ipairs(Isaac.GetRoomEntities()) do
-        if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_TAROTCARD then
-            local pickup = entity:ToPickup()
-            if pickup and (pickup.SubType == crackedFlippedBlackID or pickup.SubType == brokenFlippedBlackID or pickup.SubType == shiningFlippedBlackID) then
-                Isaac.Explode(pickup.Position, pickup, 0)
-                pickup:Remove()
-                SpawnRockBreakEffect(pickup.Position, 30, 2)
-            end
-        end
+function SelfDestructCrackedBlackRunes(pickup)
+    if pickup and (pickup.SubType == crackedFlippedBlackID or pickup.SubType == brokenFlippedBlackID or pickup.SubType == shiningFlippedBlackID) then
+        Isaac.Explode(pickup.Position, pickup, 0)
+        pickup:Remove()
+        SpawnRockBreakEffect(pickup.Position, 30, 2)
     end
 end
 
@@ -1005,6 +1031,19 @@ function SpawnGlowEffect(position)
     Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.GROUND_GLOW, 0, position, Vector(0,0), nil)
 end
 
+--BLACK RUNE?: Prevent black runes from being mimicked by Clear Rune
+---@param player EntityPlayer
+function Runes:DontMimic(_, _, player)
+    sfx = SFXManager()
+    if player:GetCard(0) == flippedBlackID or player:GetCard(0) == crackedFlippedBlackID or
+    player:GetCard(0) == brokenFlippedBlackID or player:GetCard(0) == shiningFlippedBlackID then
+        sfx:Play(SoundEffect.SOUND_THUMBS_DOWN)
+        return true
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, Runes.DontMimic, CollectibleType.COLLECTIBLE_CLEAR_RUNE)
+
 --GENERIC: given a function and number of frames, call the function after that many frames pass
 function DelayFunc(frames, func, ...)
     local args = {...}
@@ -1020,6 +1059,7 @@ function DelayFunc(frames, func, ...)
     table.insert(activeCoroutines, co)
 end
 
+--GENERIC: processes coroutines
 function ProcessCoroutines()
     for i = #activeCoroutines, 1, -1 do
         local status = coroutine.status(activeCoroutines[i])
@@ -1034,6 +1074,7 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_UPDATE, ProcessCoroutines)
 
+--GENERIC: Attempts to filter out all non-monsters
 function IsMonster(entity)
     if entity.IsActiveEnemy and 
     entity.IsVulnerableEnemy and 
@@ -1048,4 +1089,21 @@ function IsMonster(entity)
         return true
     end
     return false
+end
+
+--GENERIC: returns a random flipped rune
+function GetRandomRune()
+    local flippedRunes = {
+        flippedHagalazID,
+        flippedJeraID,
+        flippedEhwazID,
+        flippedDagazID,
+        flippedAnsuzID,
+        flippedPerthroID,
+        flippedBerkanoID,
+        flippedAlgizID,
+        flippedBlankID,
+        flippedBlackID,
+    }
+    return flippedRunes[math.random(10)]
 end
