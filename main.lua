@@ -41,6 +41,10 @@ local flippedDagazCurses = {
 }
 local activeCurses
 
+--Perthro? globals
+--only add to as a map of [playerID] = numCollectibles
+local playerCollectiblesOwned = {}
+
 --Black Rune? globals
 local numRecycles = -1
 
@@ -48,12 +52,21 @@ local numRecycles = -1
 local activeCoroutines = {}
 local sfx = SFXManager()
 
+local numModdedCollectibles
+
+for id = CollectibleType.NUM_COLLECTIBLES + 1, 10000000 do
+    if not Isaac.GetItemConfig():GetCollectible(id) then
+        numModdedCollectibles = id - CollectibleType.NUM_COLLECTIBLES - 1
+        break
+    end
+end
+
+local numTotalCollectibles = numModdedCollectibles + CollectibleType.NUM_COLLECTIBLES
+
 --local mySprite = Sprite()
 --mySprite:Load("gfx/eid_inline_icons.anm2", true)
 --local myCardID = Isaac.GetCardIdByName ("My new Card")
 --EID:addIcon("Card"..myCardID, "myNewCard", -1, 9, 9, -1, 0, mySprite)
-
-print(tostring(CollectibleIsStackable(708)))
 
 if EID then
     EID:addCard(flippedHagalazID, "Fills all pits in the room#Pits stay filled even if the room is exited", "Hagalaz?", "en_us")
@@ -74,9 +87,7 @@ end
 function Runes:UseFlippedHagalaz()
 
     local pitLocations = {}
-
     local level = Game():GetLevel()
-
     local room = Game():GetRoom()
 
     for i = 0, room:GetGridSize() - 1 do
@@ -102,7 +113,6 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedHagalaz, flippedHagala
 --rerolls basic pickups into more advanced forms (less chance for coins)
 function Runes:UseFlippedJera()
     local game = Game()
-    local room = game:GetRoom()
     local entities = Isaac.GetRoomEntities()
 
     for _, entity in ipairs(entities) do
@@ -182,44 +192,37 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAnsuz, flippedAnsuzID)
 
 --change max loops
 --add eid support
-function Runes:UseFlippedPerthro()
+---@param player EntityPlayer
+function Runes:UseFlippedPerthro(_, player, _)
+
+    local spawnableCollectibles
+    playerCollectiblesOwned[player] = GetPlayerCollectibles(player)
+    spawnableCollectibles = playerCollectiblesOwned[player] 
+    
+
     local game = Game()
     local room = game:GetRoom()
     local entities = Isaac.GetRoomEntities()
+    local itemConfig = Isaac.GetItemConfig()
 
     for _, entity in ipairs(entities) do
         if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_COLLECTIBLE then
-            local itemConfig = Isaac.GetItemConfig() --establish config
-            local itemQuality
-            local pedestalItem = entity:ToPickup() --obj for the pedestal
-            if pedestalItem and pedestalItem.SubType then
-            local item = itemConfig:GetCollectible(pedestalItem.SubType) --obj for specific item on the pedestal
-            if item then
-                itemQuality = item.Quality --quality of the item
-            else
-                print("Error: Could not retrieve item data for ID " .. tostring(pedestalItem.SubType))
-            end
-        else
-            print("Error: pedestalItem or its SubType is nil.")
-        end
-            local itemPoolObj = Game():GetItemPool() --get item pool obj
-            local roomType = room:GetType() --get room type
-            local rng = RNG() --init rng
-            rng:SetSeed(Game():GetSeeds():GetStartSeed(), 1) --set rng seed
-            local roomPool = itemPoolObj:GetPoolForRoom(roomType, rng:Next()) --get pool based on room
-            if roomPool == -1 then
-                roomPool = 0
-            end
-
-            local newItem = GetItemOfQualityFromPool(itemQuality, roomPool)
-            if pedestalItem and newItem then
-                pedestalItem:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, newItem)
-                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, pedestalItem.Position, Vector(0,0), nil)
-            else
-                print("Error: Cannot morph, pedestalItem or newItem is nil.")
+            local collectible = entity:ToPickup()
+            if collectible then
+                local newItem
+                
+                repeat newItem = math.random(1, #spawnableCollectibles)
+                
+                until not itemConfig:GetCollectible(newItem):HasTags(ItemConfig.TAG_QUEST) and
+                    CollectibleIsStackable(newItem)
+            
+                collectible:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, newItem)
+                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, collectible.Position, Vector(0,0), nil)
             end
         end
     end
+
+    playerCollectiblesOwned[player] = nil
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedPerthro, flippedPerthroID)
@@ -691,32 +694,22 @@ end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, GetSoulHeartsToAddOnUseDagaz, Card.RUNE_DAGAZ)
 
---PERTHRO?: attempts to find an item with same quality from the current room's pool
-function GetItemOfQualityFromPool(quality, pool)
-    local rng = RNG()
-    rng:SetSeed(Game():GetSeeds():GetStartSeed(), 1)
-    local itemPoolObj = Game():GetItemPool()
-    local item
-    local count = 0
-    while count < 200 do
-        item = itemPoolObj:GetCollectible(pool, false, rng:Next()) --pull item from pool
-        if item == nil then
-            return nil
+--PERTHRO?: returns a list of all the collectibles the player has
+---@param player EntityPlayer
+function GetPlayerCollectibles(player)
+
+    local ownedCollectibles = {}
+
+    for id = 1, numTotalCollectibles do
+        if player:HasCollectible(id, true) then
+            local amount = player:GetCollectibleNum(id, true)
+            for i = 1, amount do
+                table.insert(ownedCollectibles, id)
+            end
+            print("added item with id " .. tostring(id) .. " , " .. tostring(amount) .. " times.")
         end
-        local itemConfig = Isaac.GetItemConfig() --make configobj
-        local itemData = itemConfig:GetCollectible(item) --get data of the item
-        if itemData == nil then
-            return nil
-        end
-        local itemQuality = itemData.Quality --get quality of the item
-        if itemQuality == quality then --found an item of same quality
-            itemPoolObj:RemoveCollectible(item) --remove it from pool
-            return item
-        end
-        count = count + 1
     end
-    itemPoolObj:RemoveCollectible(item)
-    return item
+    return ownedCollectibles
 end
 
 --BERKANO?: returns false if trinket, quest, or otherwise ineligible familiars are detected
