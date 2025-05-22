@@ -41,6 +41,11 @@ local flippedDagazCurses = {
 }
 local activeCurses
 
+--Algiz? globals
+local statFadeCounter = nil
+local statFadeDuration = nil
+local fadingTearsMult, fadingLuck 
+
 --Black Rune? globals
 local numRecycles = -1
 
@@ -293,8 +298,12 @@ end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBerkano, flippedBerkanoID)
 
+--adds one broken heart and grants x2 tears and +10 luck that fades away over 40 seconds
+---@param player EntityPlayer
 function Runes:UseFlippedAlgiz(_, player, _)
-
+    player:AddBrokenHearts(1)
+    Runes:AddTears(player, 1)
+    Runes:AddLuck(player, 10)
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAlgiz, flippedAlgizID)
@@ -484,6 +493,7 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.DiscretelyRemovePits)
 
+--HAGALAZ?: Refresh the map that holds pit clearing info
 function Runes:ResetHagalazOnChangeFloor()
     hagalazUsedThisFloor = false
     roomIndicesWithPitsRemoved = {}
@@ -907,6 +917,32 @@ function GetCollectibleFromFamiliar(familiar)
     return familiarToCollectible[familiarVar]
 end
 
+--ALGIZ?: adds tears specified to the player specified
+---@param player EntityPlayer
+---@param tearsToAdd number
+function _AddTears(player, tearsToAdd)
+
+    player:AddCacheFlags(CacheFlag.CACHE_FIREDELAY)
+    player.FireDelay = player.FireDelay + tearsToAdd
+end
+
+function Runes:_AddTears(player, _)
+
+end
+
+mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, Runes._AddTears)
+
+--ALGIZ?: adds luck specified to the player specified
+---@param player EntityPlayer
+---@param luckToAdd number
+function Runes:_AddLuck(player, _, luckToAdd)
+    
+    player:AddCacheFlags(CacheFlag.CACHE_LUCK)
+    player.Luck = player.Luck + luckToAdd
+end
+
+mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, Runes._AddLuck)
+
 --BLANK RUNE?: return flipped rune id based on the id of the normal rune
 function GetFlippedIdFromNormal(subType)
 
@@ -973,7 +1009,7 @@ mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.DeleteCrackedBlackRunes)
 
 function Runes:RerollCrackedBlackRunes(_, card, _, _)
     if card == crackedFlippedBlackID or card == brokenFlippedBlackID or card == shiningFlippedBlackID then
-        return GetRandomRune()
+        return GetRandomFlippedRune()
     end
 end
 
@@ -995,7 +1031,7 @@ function SelfDestructCrackedBlackRunes(pickup)
     end
 end
 
---BLACK RUNE?: causes [numPickups] to appear at the player's feet and move outward at [intensity] speed
+--BLACK RUNE?: causes [numPickups] to appear at [position] and move outward at [intensity] speed
 function SpawnPickups(position, numPickups, intensity, pickupsList)
 
     local pickupsSpawned = {}
@@ -1092,7 +1128,7 @@ function IsMonster(entity)
 end
 
 --GENERIC: returns a random flipped rune
-function GetRandomRune()
+function GetRandomFlippedRune()
     local flippedRunes = {
         flippedHagalazID,
         flippedJeraID,

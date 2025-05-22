@@ -118,7 +118,6 @@ function CollectibleIsStackable(collectible)
         [CollectibleType.COLLECTIBLE_GIMPY] = false,
         [CollectibleType.COLLECTIBLE_PIGGY_BANK] = false,
         [CollectibleType.COLLECTIBLE_BALL_OF_TAR] = false,
-        [CollectibleType.COLLECTIBLE_STOP_WATCH] = false,
         [CollectibleType.COLLECTIBLE_TINY_PLANET] = false,
         [CollectibleType.COLLECTIBLE_INFESTATION_2] = false,
         [CollectibleType.COLLECTIBLE_E_COLI] = false,
