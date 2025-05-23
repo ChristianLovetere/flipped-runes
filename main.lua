@@ -40,11 +40,20 @@ local flippedDagazCurses = {
     LevelCurse.CURSE_OF_BLIND
 }
 local activeCurses
+local floorStartCurses = 0
+
+--Ansuz? globals
+local flippedAnsuzCornerRoomIndex = nil
+local flippedAnsuzDoorSlot = nil
 
 --Algiz? globals
-local statFadeCounter = nil
-local statFadeDuration = nil
-local fadingTearsMult, fadingLuck 
+local tearsMult = 1.0
+local luckToAdd = 0.0
+local startTearsMult = 1.0
+local startLuckToAdd = 0.0
+local flippedAlgizPlayer
+local flippedAlgizCount = nil
+local flippedAlgizDuration = nil
 
 --Black Rune? globals
 local numRecycles = -1
@@ -52,6 +61,8 @@ local numRecycles = -1
 --misc globals
 local activeCoroutines = {}
 local sfx = SFXManager()
+local forceProceedCoroutines = false
+local coroutineNumber = 1
 
 local numModdedCollectibles
 
@@ -73,15 +84,15 @@ if EID then
     EID:addCard(flippedHagalazID, "Fills all pits in the room#Pits stay filled even if the room is exited", "Hagalaz?", "en_us")
     EID:addCard(flippedJeraID, "Rerolls {{Coin}}, {{Bomb}}, {{Key}}, and {{HalfHeart}}/{{Heart}} into other variants of their pickup type#{{Shop}} Works on pickups that are for sale", "Jera?", "en_us")
     EID:addCard(flippedEhwazID, "{{DemonBeggar}} Teleports Isaac to the Black Market#Spawns a {{Card1}} Fool Card inside the Black Market after teleporting", "Ehwaz?", "en_us")
-    EID:addCard(flippedDagazID, "\2 Adds a random {{ColorPurple}}curse{{CR}} to the current floor#\1 For the rest of the floor, enemies have a chance to be debuffed when a room is entered# The chance for a debuff increases with the number of active curses#{{Card35}} Dagaz grants an extra {{HalfSoulHeart}} per curse added", "Dagaz?", "en_us")
+    EID:addCard(flippedDagazID, "\2 Adds a random {{ColorPurple}}curse{{CR}} to the current floor#\1 For the rest of the floor, enemies have a chance to be debuffed when a room is entered# The chance for a debuff increases with the number of active curses#{{Card35}} Dagaz grants an extra {{HalfSoulHeart}} per curse added by this rune", "Dagaz?", "en_us")
     EID:addCard(flippedAnsuzID, "tbd", "Ansuz?", "en_us")
-    EID:addCard(flippedPerthroID, "Rerolls items in the room into items Isaac already owns# Avoids rerolling into vanilla items that have no benefit when duplicated, including active items #{{Blank}} (except {{Collectible297}},{{Collectible515}},{{Collectible490}})# If Isaac has no eligible items, rerolls into a random item from the current room's pool", "Perthro?", "en_us")
+    EID:addCard(flippedPerthroID, "Rerolls items in the room into items Isaac already owns# Avoids rerolling into vanilla items that have no benefit when duplicated, including active items #{{Blank}} (except {{Collectible297}},{{Collectible515}},{{Collectible490}},{{Collectible628}})# If Isaac has no eligible items, rerolls into a random item from the current room's pool", "Perthro?", "en_us")
     EID:addCard(flippedBerkanoID, "\2 Removes up to 2 vanilla familiars#\1 Spawns an item from the current room's pool for each familiar removed", "Berkano?", "en_us")
-    EID:addCard(flippedAlgizID, "tbd", "Algiz?", "en_us")
+    EID:addCard(flippedAlgizID, "{{BrokenHeart}} +1 Broken Heart#{{Timer}} Wears off over 40 seconds:#\1 x2 Tears multiplier#\1 +10 Luck#Using Algiz? again while it's already active will reset the timer", "Algiz?", "en_us")
     EID:addCard(flippedBlankID, "{{Rune}} Converts all rune pickups in the room into their flipped variants#{{Shop}} Works on runes that are for sale", "Blank Rune?", "en_us")
-    EID:addCard(flippedBlackID, "Creates a wide variety of pickups#!!! Highly volatile!# Can't be mimicked by#{{Blank}} {{Collectible263}} Clear Rune", "Black Rune?", "en_us")
-    EID:addCard(crackedFlippedBlackID, "Creates 1-3 {{Card}}, {{Pill}}, and {{Battery}}, 2-3 times#!!! Explodes after a short delay when dropped# Can't be mimicked by#{{Blank}} {{Collectible263}} Clear Rune", "Black Rune..?", "en_us")
-    EID:addCard(brokenFlippedBlackID, "Creates 1-2 {{Chest}}, {{BlackSack}}, and {{Heart}}, 2-3 times#!!! Explodes after a short delay when dropped# Can't be mimicked by#{{Blank}} {{Collectible263}} Clear Rune", "Black Rune...", "en_us")
+    EID:addCard(flippedBlackID, "Creates a wide variety of pickups#!!! Highly volatile!#{{Collectible263}} Can't be mimicked by Clear Rune", "Black Rune?", "en_us")
+    EID:addCard(crackedFlippedBlackID, "Creates 1-3 {{Card}}, {{Pill}}, and {{Battery}}, 2-3 times#!!! Explodes after a short delay when dropped#{{Collectible263}} Can't be mimicked by Clear Rune", "Black Rune..?", "en_us")
+    EID:addCard(brokenFlippedBlackID, "Creates 1-2 {{Chest}}, {{BlackSack}}, and {{Heart}}, 2-3 times#!!! Explodes after a short delay when dropped#{{Collectible263}} Can't be mimicked by Clear Rune", "Black Rune...", "en_us")
     EID:addCard(shiningFlippedBlackID, "!!! Likely to explode and spawn bombs around Isaac, lighting enemies ablaze with a high damage burning effect# Small chance to create 2-3 {{ColorYellow}}Trinkets{{CR}}, {{GoldenKey}}, {{GoldenBomb}}, and {{CoinHeart}} instead, without consuming the rune#!!! Explodes after a short delay when dropped#{{Collectible263}} Can't be mimicked by Clear Rune", "Black Rune!?", "en_us")
 end
 
@@ -106,7 +117,7 @@ function Runes:UseFlippedHagalaz()
 
     hagalazUsedThisFloor = true
     roomIndicesWithPitsRemoved[level:GetCurrentRoomDesc().GridIndex] = pitLocations
-    InitFloorColorPulse(0.355/2,.601/2,.554/2, 60.0)
+    InitFloorColorPulse(0.355/2,.601/2,.554/2, 30.0)
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedHagalaz, flippedHagalazID)
@@ -186,7 +197,8 @@ function Runes:UseFlippedAnsuz()
     end
     
     level:ApplyBlueMapEffect()
-    level:UpdateVisibility()      
+    level:UpdateVisibility()     
+    Isaac.RunCallback("POST_REMOVE_CURSE_OF_LOST")
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAnsuz, flippedAnsuzID)
@@ -301,12 +313,58 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBerkano, flippedBerkan
 --adds one broken heart and grants x2 tears and +10 luck that fades away over 40 seconds
 ---@param player EntityPlayer
 function Runes:UseFlippedAlgiz(_, player, _)
+
     player:AddBrokenHearts(1)
-    Runes:AddTears(player, 1)
-    Runes:AddLuck(player, 10)
+    flippedAlgizPlayer = player
+    flippedAlgizCount = 0
+    flippedAlgizDuration = 1200.0
+    
+    startTearsMult = 2.0
+    startLuckToAdd = 10.0
+    tearsMult = startTearsMult
+    luckToAdd = startLuckToAdd
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAlgiz, flippedAlgizID)
+
+function Runes:FlippedAlgizOnUpdate()
+
+    --if anything is nil we can't proceed
+    if flippedAlgizCount == nil or flippedAlgizDuration == nil or flippedAlgizPlayer == nil then
+        return
+    end
+
+    --if count passes duration, we are done
+    if flippedAlgizCount > flippedAlgizDuration then
+        flippedAlgizCount = nil
+        flippedAlgizDuration = nil
+        flippedAlgizPlayer = nil
+        return
+    end
+
+    --only decrement once every second
+    if flippedAlgizCount % 30 == 0 then
+        FlippedAlgizAbility(flippedAlgizPlayer, flippedAlgizCount, flippedAlgizDuration)  
+    end
+    flippedAlgizCount = flippedAlgizCount + 1
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, Runes.FlippedAlgizOnUpdate)
+
+function FlippedAlgizAbility(player, count, duration)
+    
+    if duration == 0 or startTearsMult*duration == 0 then
+        return
+    end
+    tearsMult = startTearsMult * (1 - count/(startTearsMult*duration))
+    luckToAdd = startLuckToAdd * (1 - count/duration)
+
+
+    player:AddCacheFlags(CacheFlag.CACHE_FIREDELAY)
+    player:AddCacheFlags(CacheFlag.CACHE_LUCK)
+
+    player:EvaluateItems()
+end
 
 --turns all runes on the ground in the room into flipped variant
 function Runes:UseFlippedBlank()
@@ -434,6 +492,9 @@ function FloorColorPulse()
     
     if floorColorPulseCounter == 0.0 then
         Game():GetRoom():SetFloorColor(Color(1, 1, 1, 1, floorColorPulseRo, floorColorPulseGo, floorColorPulseBo))
+    elseif floorColorPulseDuration == 0 then
+        floorColorPulseCounter = floorColorPulseCounter + 1.0
+        return
     else
         local progress = floorColorPulseCounter / floorColorPulseDuration
         local partialRo = floorColorPulseRo * (1 - progress)
@@ -450,9 +511,12 @@ function ColorPulseOnUpdate()
         return
     end
     --reset back to nil when done
-    if floorColorPulseCounter == floorColorPulseDuration then
+    if floorColorPulseCounter > floorColorPulseDuration then
         floorColorPulseCounter = nil
         floorColorPulseDuration = nil
+        floorColorPulseRo = nil
+        floorColorPulseGo = nil
+        floorColorPulseBo = nil
     else
         FloorColorPulse()
     end
@@ -466,6 +530,9 @@ function Runes:ColorPulseCancelOnChangeRoom()
     end
     floorColorPulseCounter = nil
     floorColorPulseDuration = nil
+    floorColorPulseRo = nil
+    floorColorPulseGo = nil
+    floorColorPulseBo = nil
 end
 
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.ColorPulseCancelOnChangeRoom)
@@ -493,13 +560,20 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.DiscretelyRemovePits)
 
---HAGALAZ?: Refresh the map that holds pit clearing info
-function Runes:ResetHagalazOnChangeFloor()
+--HAGALAZ?: Reset vars related to Hagalaz? ability
+function Runes:ResetHagalaz()
     hagalazUsedThisFloor = false
     roomIndicesWithPitsRemoved = {}
+    
+    floorColorPulseRo = nil
+    floorColorPulseGo = nil
+    floorColorPulseBo = nil
+    floorColorPulseCounter = nil
+    floorColorPulseDuration = nil
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.ResetHagalazOnChangeFloor)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.ResetHagalaz)
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, Runes.ResetHagalaz)
 
 --JERA?: get a weighted random improved coin type
 function GetRefinedCoin()
@@ -669,12 +743,14 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.FlippedDagazActiveOnNewRoom)
 
---DAGAZ?: disables the floor-wide effect after changing floor
-function Runes:DisableFlippedDagazOnChangeRoom()
+--DAGAZ?: disables the floor-wide effect after changing floor and gets new floorStartCurses
+function Runes:FlippedDagazOnChangeFloor()
+    floorStartCurses = GetNumActiveCurses()
+    print(floorStartCurses)
     flippedDagazActive = false
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.DisableFlippedDagazOnChangeRoom)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.FlippedDagazOnChangeFloor)
 
 --DAGAZ?: apply a random status effect to the enemy. chance to fail decreases with number of active curses
 function ApplyRandomStatusEffect(enemy, source)
@@ -699,9 +775,12 @@ function ApplyRandomStatusEffect(enemy, source)
 
     local randomEffect = statusEffects[effectChosen]
     
-
+    local activeC = GetNumActiveCurses()
+    if activeC == 0 then
+        return
+    end
     --apply the effect. chance of applying is 1/(#activeCurses + 1)
-    if enemy and randomEffect and (math.random(100) > (1.0/(GetNumActiveCurses() + 1.0))*100.0) then
+    if enemy and randomEffect and (math.random(100) > (1.0/(activeC + 1.0))*100.0) then
         randomEffect(enemy, source)
     end
 end
@@ -712,15 +791,145 @@ function Runes:GetSoulHeartsToAddOnUseDagaz(_, player, _)
     if flippedDagazActive ~= true then
         return
     end
-
-    print("adding" .. tostring(activeCurses) .. "halfsoulhearts")
-    Isaac.GetPlayer(0):AddSoulHearts(activeCurses)
+    player:AddSoulHearts(activeCurses - floorStartCurses)
 
     flippedDagazActive = false
     activeCurses = 0
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.GetSoulHeartsToAddOnUseDagaz, Card.RUNE_DAGAZ)
+
+--ANSUZ?: opens a path to the usr if curse of the lost is removed after an Ansuz? has been used this floor
+function Runes:OpenUsr()
+
+    local level = Game():GetLevel()
+
+    local usrIndex = level:QueryRoomTypeIndex(RoomType.ROOM_ULTRASECRET, true, RNG(), true)
+
+    print("usr: " .. tostring(usrIndex))
+    local cornerRoomIndex, door = GetUsrRedAccessRoomIndex(usrIndex)
+
+    flippedAnsuzCornerRoomIndex = cornerRoomIndex
+    flippedAnsuzDoorSlot = door
+end
+
+mod:AddCallback("POST_REMOVE_CURSE_OF_LOST", Runes.OpenUsr)
+
+--ANSUZ?: Returns a safeGridIndex that represents a room 2 away from usr and a door slot to open to lead to usr
+function GetUsrRedAccessRoomIndex(usrIndex)
+    
+    local level = Game():GetLevel()
+
+    local northEast = usrIndex-12
+    local southEast = usrIndex+14
+    local southWest = usrIndex+12
+    local northWest = usrIndex-14
+
+    local northNorth = usrIndex-26
+    local eastEast = usrIndex+2
+    local southSouth = usrIndex+26
+    local westWest = usrIndex-2
+
+    local cornerRoomLocations = {
+        northNorth,
+        eastEast,
+        southSouth,
+        westWest,
+        northEast,
+        southEast,
+        southWest,
+        northWest
+    }
+
+    local safeGridIndices = {}
+
+    for i = 1, #cornerRoomLocations do
+        local roomDesc = level:GetRoomByIdx(cornerRoomLocations[i])
+        if roomDesc.SafeGridIndex ~= -1 and roomDesc.Data ~= nil and roomDesc.Data.Shape ~= nil then
+            safeGridIndices[roomDesc.SafeGridIndex] = roomDesc.Data.Shape
+            print("added safeIndex " .. tostring(roomDesc.SafeGridIndex) .. " with shape " .. tostring(roomDesc.Data.Shape) .. " to bucket")
+        end
+    end
+
+    local row
+    local column
+    local usrRow
+    local usrColumn
+    local doorToOpen
+
+    usrColumn, usrRow = GetColumnAndRow(usrIndex)
+    for safeGridIndex, roomShape in pairs(safeGridIndices) do
+
+        column, row = GetColumnAndRow(safeGridIndex)
+
+        if column == usrColumn and row < usrRow then
+            print(tostring(safeGridIndex) .. ": column == usrColumn and row < usrRow")
+            if roomShape == RoomShape.ROOMSHAPE_LTL then
+                doorToOpen = DoorSlot.DOWN1
+            else
+                doorToOpen = DoorSlot.DOWN0
+            end
+        elseif column > usrColumn and row == usrRow then 
+            print(tostring(safeGridIndex) .. ": column > usrColumn and row == usrRow")
+            doorToOpen = DoorSlot.LEFT0
+        elseif column == usrColumn and row > usrRow then 
+            print(tostring(safeGridIndex) .. ": column == usrColumn and row > usrRow")
+            if roomShape == RoomShape.ROOMSHAPE_LTL then
+                doorToOpen = DoorSlot.UP1
+            else
+                doorToOpen = DoorSlot.UP0
+            end
+        elseif column < usrColumn and row == usrRow then
+            print(tostring(safeGridIndex) .. ": column < usrColumn and row == usrRow")
+            doorToOpen = DoorSlot.RIGHT0
+        elseif column < usrColumn and row < usrRow then
+            print(tostring(safeGridIndex) .. ": column < usrColumn and row < usrRow")
+            if roomShape == RoomShape.ROOMSHAPE_1x1 or roomShape == RoomShape.ROOMSHAPE_1x2 then
+                doorToOpen = DoorSlot.DOWN0
+            else
+                doorToOpen = DoorSlot.DOWN1
+            end
+        elseif column < usrColumn and row > usrRow then
+            print(tostring(safeGridIndex) .. ": column < usrColumn and row > usrRow")
+            if roomShape == RoomShape.ROOMSHAPE_1x1 or roomShape == RoomShape.ROOMSHAPE_1x2 then
+                doorToOpen = DoorSlot.UP0
+            else
+                doorToOpen = DoorSlot.UP1
+            end
+        elseif column > usrColumn and row > usrRow then
+            print(tostring(safeGridIndex) .. ": column > usrColumn and row > usrRow")
+            doorToOpen = DoorSlot.UP0
+        elseif column > usrColumn and row < usrRow then
+            print(tostring(safeGridIndex) .. ": column > usrColumn and row < usrRow")
+            if roomShape == RoomShape.ROOMSHAPE_1x1 or roomShape == RoomShape.ROOMSHAPE_2x1 then
+                doorToOpen = DoorSlot.LEFT0
+            else
+                doorToOpen = DoorSlot.LEFT1
+            end
+        end
+        print(tostring(safeGridIndex) .. ": Opening door " .. tostring(doorToOpen))
+        level:MakeRedRoomDoor(safeGridIndex, doorToOpen)
+    end
+end
+
+
+
+--ANSUZ?: returns the column and row of a safeGridIndex.
+---@param safeGridIndex integer
+function GetColumnAndRow(safeGridIndex)
+    
+    local column = safeGridIndex % 13
+    local row = safeGridIndex // 13
+    return column, row
+end
+
+--ANSUZ?: resets globals to nil after entering a new floor
+function Runes:FlippedAnsuzReset()
+    flippedAnsuzCornerRoomIndex = nil
+    flippedAnsuzDoorSlot = nil
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.FlippedAnsuzReset)
 
 --PERTHRO?: returns a list of all the collectibles the player has
 ---@param player EntityPlayer
@@ -736,10 +945,6 @@ function GetPlayerCollectibles(player)
             end
             --print("added item with id " .. tostring(id) .. " , " .. tostring(amount) .. " times.")
         end
-    end
-
-    for i = 1, #ownedCollectibles do
-        print("item: " .. tostring(ownedCollectibles[i]))
     end
 
     return ownedCollectibles
@@ -919,29 +1124,48 @@ end
 
 --ALGIZ?: adds tears specified to the player specified
 ---@param player EntityPlayer
----@param tearsToAdd number
-function _AddTears(player, tearsToAdd)
-
-    player:AddCacheFlags(CacheFlag.CACHE_FIREDELAY)
-    player.FireDelay = player.FireDelay + tearsToAdd
+function Runes:AddTears(player, _)
+    
+    if player.MaxFireDelay == -1 then
+        return
+    end
+    local onscreenTears = 30 / (player.MaxFireDelay + 1) --conversion from MaxFireDelay to tears stat
+    local newOnscreenTears = onscreenTears*tearsMult
+    if newOnscreenTears == 0 then
+        return
+    end
+    local newFireDelay = 30 / newOnscreenTears - 1 --conversion from tears stat to MaxFireDelay
+    player.MaxFireDelay = newFireDelay
 end
 
-function Runes:_AddTears(player, _)
-
-end
-
-mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, Runes._AddTears)
+mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, Runes.AddTears, CacheFlag.CACHE_FIREDELAY)
 
 --ALGIZ?: adds luck specified to the player specified
 ---@param player EntityPlayer
----@param luckToAdd number
-function Runes:_AddLuck(player, _, luckToAdd)
-    
-    player:AddCacheFlags(CacheFlag.CACHE_LUCK)
+function Runes:AddLuck(player, _)
+
     player.Luck = player.Luck + luckToAdd
 end
 
-mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, Runes._AddLuck)
+mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, Runes.AddLuck, CacheFlag.CACHE_LUCK)
+
+function Runes:TurnOffFlippedAlgizOnNewRun(isContinued)
+    if isContinued == false then
+        flippedAlgizCount = flippedAlgizDuration
+        tearsMult = 1.0
+        luckToAdd = 0.0
+
+        local numPlayers = Game():GetNumPlayers()
+
+        for i = 0, numPlayers - 1 do
+            local player = Isaac.GetPlayer(i)
+            player:AddCacheFlags(CacheFlag.CACHE_ALL)
+            player:EvaluateItems()
+        end
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, Runes.TurnOffFlippedAlgizOnNewRun)
 
 --BLANK RUNE?: return flipped rune id based on the id of the normal rune
 function GetFlippedIdFromNormal(subType)
@@ -983,6 +1207,10 @@ end
 --BLACK RUNE?: big ring of explosions
 function DoBombRing(player, bombVariant, numBombs, speed, spawnRadius, angleOffset)
     angleOffset = angleOffset or 0
+
+    if numBombs == 0 then
+        return
+    end
 
     for i = 1, numBombs do
         local angle = math.rad((i - 1) * (360/numBombs) + angleOffset)
@@ -1086,12 +1314,14 @@ function DelayFunc(frames, func, ...)
 
     local co = coroutine.create(function()
         local startFrame = Game():GetFrameCount()
-        while Game():GetFrameCount() < startFrame + frames do
+        while Game():GetFrameCount() < startFrame + frames and forceProceedCoroutines == false do
             coroutine.yield() --pause until enough frames pass
         end
+        --print("cor #" .. tostring(coroutineNumber))
+        coroutineNumber = coroutineNumber + 1
         func(table.unpack(args)) --execute function after delay
     end)
-
+    
     table.insert(activeCoroutines, co)
 end
 
@@ -1109,6 +1339,12 @@ function ProcessCoroutines()
 end
 
 mod:AddCallback(ModCallbacks.MC_POST_UPDATE, ProcessCoroutines)
+
+function EnableCoroutinesToWaitOnUpdate()
+    forceProceedCoroutines = false
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, EnableCoroutinesToWaitOnUpdate)
 
 --GENERIC: Attempts to filter out all non-monsters
 function IsMonster(entity)
