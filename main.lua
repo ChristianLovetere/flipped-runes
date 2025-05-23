@@ -799,47 +799,56 @@ end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.GetSoulHeartsToAddOnUseDagaz, Card.RUNE_DAGAZ)
 
---ANSUZ?: opens a path to the usr if curse of the lost is removed after an Ansuz? has been used this floor
-function Runes:OpenUsr()
-
+--ANSUZ?: Finds and opens a path to the Usr from all valid rooms that are 2 away from it
+function Runes:OpenPathToUsr()
+    
     local level = Game():GetLevel()
 
     local usrIndex = level:QueryRoomTypeIndex(RoomType.ROOM_ULTRASECRET, true, RNG(), true)
 
     print("usr: " .. tostring(usrIndex))
-    local cornerRoomIndex, door = GetUsrRedAccessRoomIndex(usrIndex)
 
-    flippedAnsuzCornerRoomIndex = cornerRoomIndex
-    flippedAnsuzDoorSlot = door
-end
-
-mod:AddCallback("POST_REMOVE_CURSE_OF_LOST", Runes.OpenUsr)
-
---ANSUZ?: Returns a safeGridIndex that represents a room 2 away from usr and a door slot to open to lead to usr
-function GetUsrRedAccessRoomIndex(usrIndex)
-    
-    local level = Game():GetLevel()
-
-    local northEast = usrIndex-12
-    local southEast = usrIndex+14
-    local southWest = usrIndex+12
-    local northWest = usrIndex-14
-
+    local westWest = usrIndex-2
     local northNorth = usrIndex-26
     local eastEast = usrIndex+2
     local southSouth = usrIndex+26
-    local westWest = usrIndex-2
 
-    local cornerRoomLocations = {
-        northNorth,
-        eastEast,
-        southSouth,
-        westWest,
-        northEast,
-        southEast,
-        southWest,
-        northWest
-    }
+    local northWest = usrIndex-14
+    local northEast = usrIndex-12
+    local southEast = usrIndex+14
+    local southWest = usrIndex+12
+
+    local usrRow
+    local usrColumn
+    
+    usrColumn, usrRow = GetColumnAndRow(usrIndex)
+
+    local cornerRoomLocations = {}
+
+    if IsWithinBounds(usrRow, usrColumn-2) then
+        table.insert(cornerRoomLocations, westWest)
+    end
+    if IsWithinBounds(usrRow-2, usrColumn) then
+        table.insert(cornerRoomLocations, northNorth)
+    end
+    if IsWithinBounds(usrRow, usrColumn+2) then
+        table.insert(cornerRoomLocations, eastEast)
+    end
+    if IsWithinBounds(usrRow+2, usrColumn) then
+        table.insert(cornerRoomLocations, southSouth)
+    end
+    if IsWithinBounds(usrRow-1, usrColumn-1) then
+        table.insert(cornerRoomLocations, northWest)
+    end
+    if IsWithinBounds(usrRow-1, usrColumn+1) then
+        table.insert(cornerRoomLocations, northEast)
+    end
+    if IsWithinBounds(usrRow+1, usrColumn+1) then
+        table.insert(cornerRoomLocations, southEast)
+    end
+    if IsWithinBounds(usrRow+1, usrColumn-1) then
+        table.insert(cornerRoomLocations, southWest)
+    end
 
     local safeGridIndices = {}
 
@@ -853,54 +862,51 @@ function GetUsrRedAccessRoomIndex(usrIndex)
 
     local row
     local column
-    local usrRow
-    local usrColumn
     local doorToOpen
 
-    usrColumn, usrRow = GetColumnAndRow(usrIndex)
     for safeGridIndex, roomShape in pairs(safeGridIndices) do
 
         column, row = GetColumnAndRow(safeGridIndex)
 
         if column == usrColumn and row < usrRow then
-            print(tostring(safeGridIndex) .. ": column == usrColumn and row < usrRow")
+            print(tostring(safeGridIndex) .. ": north of Usr")
             if roomShape == RoomShape.ROOMSHAPE_LTL then
                 doorToOpen = DoorSlot.DOWN1
             else
                 doorToOpen = DoorSlot.DOWN0
             end
         elseif column > usrColumn and row == usrRow then 
-            print(tostring(safeGridIndex) .. ": column > usrColumn and row == usrRow")
+            print(tostring(safeGridIndex) .. ": east of Usr")
             doorToOpen = DoorSlot.LEFT0
         elseif column == usrColumn and row > usrRow then 
-            print(tostring(safeGridIndex) .. ": column == usrColumn and row > usrRow")
+            print(tostring(safeGridIndex) .. ": south of Usr")
             if roomShape == RoomShape.ROOMSHAPE_LTL then
                 doorToOpen = DoorSlot.UP1
             else
                 doorToOpen = DoorSlot.UP0
             end
         elseif column < usrColumn and row == usrRow then
-            print(tostring(safeGridIndex) .. ": column < usrColumn and row == usrRow")
+            print(tostring(safeGridIndex) .. ": west of Usr")
             doorToOpen = DoorSlot.RIGHT0
         elseif column < usrColumn and row < usrRow then
-            print(tostring(safeGridIndex) .. ": column < usrColumn and row < usrRow")
+            print(tostring(safeGridIndex) .. ": northWest of Usr")
             if roomShape == RoomShape.ROOMSHAPE_1x1 or roomShape == RoomShape.ROOMSHAPE_1x2 then
                 doorToOpen = DoorSlot.DOWN0
             else
                 doorToOpen = DoorSlot.DOWN1
             end
         elseif column < usrColumn and row > usrRow then
-            print(tostring(safeGridIndex) .. ": column < usrColumn and row > usrRow")
+            print(tostring(safeGridIndex) .. ": southWest of Usr")
             if roomShape == RoomShape.ROOMSHAPE_1x1 or roomShape == RoomShape.ROOMSHAPE_1x2 then
                 doorToOpen = DoorSlot.UP0
             else
                 doorToOpen = DoorSlot.UP1
             end
         elseif column > usrColumn and row > usrRow then
-            print(tostring(safeGridIndex) .. ": column > usrColumn and row > usrRow")
+            print(tostring(safeGridIndex) .. ": southEast of Usr")
             doorToOpen = DoorSlot.UP0
         elseif column > usrColumn and row < usrRow then
-            print(tostring(safeGridIndex) .. ": column > usrColumn and row < usrRow")
+            print(tostring(safeGridIndex) .. ": northEast of Usr")
             if roomShape == RoomShape.ROOMSHAPE_1x1 or roomShape == RoomShape.ROOMSHAPE_2x1 then
                 doorToOpen = DoorSlot.LEFT0
             else
@@ -912,7 +918,7 @@ function GetUsrRedAccessRoomIndex(usrIndex)
     end
 end
 
-
+mod:AddCallback("POST_REMOVE_CURSE_OF_LOST", Runes.OpenPathToUsr)
 
 --ANSUZ?: returns the column and row of a safeGridIndex.
 ---@param safeGridIndex integer
@@ -921,6 +927,11 @@ function GetColumnAndRow(safeGridIndex)
     local column = safeGridIndex % 13
     local row = safeGridIndex // 13
     return column, row
+end
+
+--ANSUZ?: unction to check if row and column are within bounds
+function IsWithinBounds(row, col)
+    return row >= 0 and row < 13 and col >= 0 and col < 13
 end
 
 --ANSUZ?: resets globals to nil after entering a new floor
