@@ -3,6 +3,7 @@ local mod = FlippedRunes
 local Runes = {}
 
 include("unstackableVanillaItems")
+include("eid_support")
 
 local flippedHagalazID = Isaac.GetCardIdByName("Hagalaz?")
 local flippedJeraID = Isaac.GetCardIdByName("Jera?")
@@ -43,8 +44,10 @@ local activeCurses
 local floorStartCurses = 0
 
 --Ansuz? globals
-local flippedAnsuzCornerRoomIndex = nil
-local flippedAnsuzDoorSlot = nil
+local flippedAnsuzActive = false
+local flippedAnsuzCounter = 0
+local flippedAnsuzDuration = 30
+local previousCurses = 0
 
 --Algiz? globals
 local tearsMult = 1.0
@@ -75,17 +78,12 @@ end
 
 local numTotalCollectibles = numModdedCollectibles + CollectibleType.NUM_COLLECTIBLES
 
---local mySprite = Sprite()
---mySprite:Load("gfx/eid_inline_icons.anm2", true)
---local myCardID = Isaac.GetCardIdByName ("My new Card")
---EID:addIcon("Card"..myCardID, "myNewCard", -1, 9, 9, -1, 0, mySprite)
-
 if EID then
     EID:addCard(flippedHagalazID, "Fills all pits in the room#Pits stay filled even if the room is exited", "Hagalaz?", "en_us")
     EID:addCard(flippedJeraID, "Rerolls {{Coin}}, {{Bomb}}, {{Key}}, and {{HalfHeart}}/{{Heart}} into other variants of their pickup type#{{Shop}} Works on pickups that are for sale", "Jera?", "en_us")
     EID:addCard(flippedEhwazID, "{{DemonBeggar}} Teleports Isaac to the Black Market#Spawns a {{Card1}} Fool Card inside the Black Market after teleporting", "Ehwaz?", "en_us")
     EID:addCard(flippedDagazID, "\2 Adds a random {{ColorPurple}}curse{{CR}} to the current floor#\1 For the rest of the floor, enemies have a chance to be debuffed when a room is entered# The chance for a debuff increases with the number of active curses#{{Card35}} Dagaz grants an extra {{HalfSoulHeart}} per curse added by this rune", "Dagaz?", "en_us")
-    EID:addCard(flippedAnsuzID, "tbd", "Ansuz?", "en_us")
+    EID:addCard(flippedAnsuzID, "{{CurseLostSmall}} Adds Curse of the Lost to the current floor unless Isaac has {{Collectible260}} Black Candle#{{UltraSecretRoom}} If the floor's Curse of the Lost is removed or Isaac has {{Collectible260}} Black Candle, the Ultra Secret Room will be revealed and a path to it will be opened", "Ansuz?", "en_us")
     EID:addCard(flippedPerthroID, "Rerolls items in the room into items Isaac already owns# Avoids rerolling into vanilla items that have no benefit when duplicated, including active items #{{Blank}} (except {{Collectible297}},{{Collectible515}},{{Collectible490}},{{Collectible628}})# If Isaac has no eligible items, rerolls into a random item from the current room's pool", "Perthro?", "en_us")
     EID:addCard(flippedBerkanoID, "\2 Removes up to 2 vanilla familiars#\1 Spawns an item from the current room's pool for each familiar removed", "Berkano?", "en_us")
     EID:addCard(flippedAlgizID, "{{BrokenHeart}} +1 Broken Heart#{{Timer}} Wears off over 40 seconds:#\1 x2 Tears multiplier#\1 +10 Luck#Using Algiz? again while it's already active will reset the timer", "Algiz?", "en_us")
@@ -94,6 +92,44 @@ if EID then
     EID:addCard(crackedFlippedBlackID, "Creates 1-3 {{Card}}, {{Pill}}, and {{Battery}}, 2-3 times#!!! Explodes after a short delay when dropped#{{Collectible263}} Can't be mimicked by Clear Rune", "Black Rune..?", "en_us")
     EID:addCard(brokenFlippedBlackID, "Creates 1-2 {{Chest}}, {{BlackSack}}, and {{Heart}}, 2-3 times#!!! Explodes after a short delay when dropped#{{Collectible263}} Can't be mimicked by Clear Rune", "Black Rune...", "en_us")
     EID:addCard(shiningFlippedBlackID, "!!! Likely to explode and spawn bombs around Isaac, lighting enemies ablaze with a high damage burning effect# Small chance to create 2-3 {{ColorYellow}}Trinkets{{CR}}, {{GoldenKey}}, {{GoldenBomb}}, and {{CoinHeart}} instead, without consuming the rune#!!! Explodes after a short delay when dropped#{{Collectible263}} Can't be mimicked by Clear Rune", "Black Rune!?", "en_us")
+
+    
+    local flippedJeraSprite = Sprite()
+    local flippedEhwazSprite = Sprite()
+    local flippedDagazSprite = Sprite()
+    local flippedAnsuzSprite = Sprite()
+    local flippedPerthroSprite = Sprite()
+    local flippedBerkanoSprite = Sprite()
+    local flippedAlgizSprite = Sprite()
+    local flippedBlankSprite = Sprite()
+    local flippedBlackSprite = Sprite()
+    local crackedFlippedBlackSprite = Sprite()
+    local brokenFlippedBlackSprite = Sprite()
+    local shiningFlippedBlackSprite = Sprite()
+
+    local flippedHagalazSprite = Sprite()
+    flippedHagalazSprite:Load("gfx/eid_inline_icons.anm2", true)
+    EID:addIcon("Card"..flippedHagalazID, "flippedRune1", 0, 18, 23, 38, 3, flippedHagalazSprite)
+
+    local function blackCandleModifierCondition(descObj)
+        if descObj.ObjType == EntityType.ENTITY_PICKUP and descObj.ObjVariant == PickupVariant.PICKUP_COLLECTIBLE and descObj.ObjSubType == CollectibleType.COLLECTIBLE_BLACK_CANDLE then
+            local numPlayers = Game():GetNumPlayers()
+            for i = 0, numPlayers do
+                local player = Isaac.GetPlayer(i)
+                if player:GetCard(0) == flippedAnsuzID or player:GetCard(1) == flippedAnsuzID or player:GetCard(2) == flippedAnsuzID then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+
+    local function blackCandleModifierCallback(descObj)
+        EID:appendToDescription(descObj, "# Allows Algiz? to open a path to the {{UltraSecretRoom}} Ultra Secret Room on use")
+        return descObj
+    end
+
+    EID:addDescriptionModifier("BlackCandleAnsuz?", blackCandleModifierCondition, blackCandleModifierCallback)
 end
 
 function Runes:UseFlippedHagalaz()
@@ -158,7 +194,6 @@ function Runes:UseFlippedEhwaz()
     local blackMarketIndex = level:QueryRoomTypeIndex(RoomType.ROOM_BLACK_MARKET, false, RNG())
     
     if blackMarketIndex then
-        --level:ChangeRoom(blackMarketIndex)
         game:StartRoomTransition(blackMarketIndex, Direction.NO_DIRECTION, RoomTransitionAnim.TELEPORT)
         shouldSpawnReturnCard = true
     end
@@ -185,24 +220,20 @@ end
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedDagaz, flippedDagazID)
 
 --redesign
-function Runes:UseFlippedAnsuz()
+---@param player EntityPlayer
+function Runes:UseFlippedAnsuz(_, player, _)
 
     local level = Game():GetLevel()
-    --find usr
-    local ultraSecretIndex = level:QueryRoomTypeIndex(RoomType.ROOM_ULTRASECRET, true, RNG(), true)
-
-    --if usr exists, reveal it on map
-    if ultraSecretIndex and ultraSecretIndex ~= -1 then
-        level:GetRoomByIdx(ultraSecretIndex).DisplayFlags = 100
+    if player:HasCollectible(CollectibleType.COLLECTIBLE_BLACK_CANDLE) then
+        Isaac.RunCallback("POST_REMOVE_CURSE_OF_LOST")
+    else
+        level:AddCurse(LevelCurse.CURSE_OF_THE_LOST, false)
+        Game():ShakeScreen(7)
+        flippedAnsuzActive = true
     end
-    
-    level:ApplyBlueMapEffect()
-    level:UpdateVisibility()     
-    Isaac.RunCallback("POST_REMOVE_CURSE_OF_LOST")
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAnsuz, flippedAnsuzID)
-
 
 --Rerolls items in the room into items the player already owns
 --will generally avoid items that have no benefit when duplicated
@@ -326,45 +357,6 @@ function Runes:UseFlippedAlgiz(_, player, _)
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAlgiz, flippedAlgizID)
-
-function Runes:FlippedAlgizOnUpdate()
-
-    --if anything is nil we can't proceed
-    if flippedAlgizCount == nil or flippedAlgizDuration == nil or flippedAlgizPlayer == nil then
-        return
-    end
-
-    --if count passes duration, we are done
-    if flippedAlgizCount > flippedAlgizDuration then
-        flippedAlgizCount = nil
-        flippedAlgizDuration = nil
-        flippedAlgizPlayer = nil
-        return
-    end
-
-    --only decrement once every second
-    if flippedAlgizCount % 30 == 0 then
-        FlippedAlgizAbility(flippedAlgizPlayer, flippedAlgizCount, flippedAlgizDuration)  
-    end
-    flippedAlgizCount = flippedAlgizCount + 1
-end
-
-mod:AddCallback(ModCallbacks.MC_POST_UPDATE, Runes.FlippedAlgizOnUpdate)
-
-function FlippedAlgizAbility(player, count, duration)
-    
-    if duration == 0 or startTearsMult*duration == 0 then
-        return
-    end
-    tearsMult = startTearsMult * (1 - count/(startTearsMult*duration))
-    luckToAdd = startLuckToAdd * (1 - count/duration)
-
-
-    player:AddCacheFlags(CacheFlag.CACHE_FIREDELAY)
-    player:AddCacheFlags(CacheFlag.CACHE_LUCK)
-
-    player:EvaluateItems()
-end
 
 --turns all runes on the ground in the room into flipped variant
 function Runes:UseFlippedBlank()
@@ -507,6 +499,7 @@ function FloorColorPulse()
 end
 
 function ColorPulseOnUpdate()
+    
     if floorColorPulseCounter == nil or floorColorPulseDuration == nil then
         return
     end
@@ -561,8 +554,10 @@ end
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.DiscretelyRemovePits)
 
 --HAGALAZ?: Reset vars related to Hagalaz? ability
-function Runes:ResetHagalaz()
-    hagalazUsedThisFloor = false
+function Runes:ResetHagalaz(isContinued)
+    isContinued = isContinued or false
+    if isContinued == false then
+        hagalazUsedThisFloor = false
     roomIndicesWithPitsRemoved = {}
     
     floorColorPulseRo = nil
@@ -570,6 +565,7 @@ function Runes:ResetHagalaz()
     floorColorPulseBo = nil
     floorColorPulseCounter = nil
     floorColorPulseDuration = nil
+    end
 end
 
 mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.ResetHagalaz)
@@ -744,13 +740,17 @@ end
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.FlippedDagazActiveOnNewRoom)
 
 --DAGAZ?: disables the floor-wide effect after changing floor and gets new floorStartCurses
-function Runes:FlippedDagazOnChangeFloor()
-    floorStartCurses = GetNumActiveCurses()
-    print(floorStartCurses)
-    flippedDagazActive = false
+function Runes:FlippedDagazResetGlobals(isContinued)
+    isContinued = isContinued or false
+    if isContinued == false then
+        floorStartCurses = GetNumActiveCurses()
+        flippedDagazActive = false
+        flippedDagazPlayer = nil
+    end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.FlippedDagazOnChangeFloor)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.FlippedDagazResetGlobals)
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, Runes.FlippedDagazResetGlobals)
 
 --DAGAZ?: apply a random status effect to the enemy. chance to fail decreases with number of active curses
 function ApplyRandomStatusEffect(enemy, source)
@@ -799,7 +799,7 @@ end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.GetSoulHeartsToAddOnUseDagaz, Card.RUNE_DAGAZ)
 
---ANSUZ?: Finds and opens a path to the Usr from all valid rooms that are 2 away from it
+--ANSUZ?: Finds and opens a path to the Usr from all valid rooms that are 2 away from it, reveals usr on map
 function Runes:OpenPathToUsr()
     
     local level = Game():GetLevel()
@@ -807,6 +807,10 @@ function Runes:OpenPathToUsr()
     local usrIndex = level:QueryRoomTypeIndex(RoomType.ROOM_ULTRASECRET, true, RNG(), true)
 
     print("usr: " .. tostring(usrIndex))
+
+    if usrIndex and usrIndex ~= -1 then
+        level:GetRoomByIdx(usrIndex).DisplayFlags = 100
+    end
 
     local westWest = usrIndex-2
     local northNorth = usrIndex-26
@@ -916,6 +920,7 @@ function Runes:OpenPathToUsr()
         print(tostring(safeGridIndex) .. ": Opening door " .. tostring(doorToOpen))
         level:MakeRedRoomDoor(safeGridIndex, doorToOpen)
     end
+    level:UpdateVisibility()
 end
 
 mod:AddCallback("POST_REMOVE_CURSE_OF_LOST", Runes.OpenPathToUsr)
@@ -929,18 +934,40 @@ function GetColumnAndRow(safeGridIndex)
     return column, row
 end
 
---ANSUZ?: unction to check if row and column are within bounds
+--ANSUZ?: function to check if row and column are within bounds
 function IsWithinBounds(row, col)
     return row >= 0 and row < 13 and col >= 0 and col < 13
 end
 
---ANSUZ?: resets globals to nil after entering a new floor
-function Runes:FlippedAnsuzReset()
-    flippedAnsuzCornerRoomIndex = nil
-    flippedAnsuzDoorSlot = nil
+--ANSUZ?: fires off the POST_REMOVE_CURSE_OF_LOST callback if the curse of the lost was recently removed
+function Runes:FlippedAnsuzDetectCurseChange()
+    
+    if flippedAnsuzActive then
+        if flippedAnsuzCounter == flippedAnsuzDuration then
+            local currentCurses = Game():GetLevel():GetCurses()
+            --print("current: " .. tostring(currentCurses & LevelCurse.CURSE_OF_THE_LOST) .. " prev: " .. tostring(previousCurses & LevelCurse.CURSE_OF_THE_LOST))
+            if currentCurses & LevelCurse.CURSE_OF_THE_LOST == 0 and previousCurses & LevelCurse.CURSE_OF_THE_LOST ~= 0 then
+                Isaac.RunCallback("POST_REMOVE_CURSE_OF_LOST")
+            end
+            previousCurses = currentCurses
+            flippedAnsuzCounter = 0
+        end
+        flippedAnsuzCounter = flippedAnsuzCounter + 1
+    end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.FlippedAnsuzReset)
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, Runes.FlippedAnsuzDetectCurseChange)
+
+function Runes:FlippedAnsuzResetGlobals(isContinued)
+    isContinued = isContinued or false
+    if isContinued == false then
+        previousCurses = 0
+        flippedAnsuzActive = false
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, Runes.FlippedAnsuzResetGlobals)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.FlippedAnsuzResetGlobals)
 
 --PERTHRO?: returns a list of all the collectibles the player has
 ---@param player EntityPlayer
@@ -1178,6 +1205,45 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, Runes.TurnOffFlippedAlgizOnNewRun)
 
+function Runes:FlippedAlgizOnUpdate()
+
+    --if anything is nil we can't proceed
+    if flippedAlgizCount == nil or flippedAlgizDuration == nil or flippedAlgizPlayer == nil then
+        return
+    end
+
+    --if count passes duration, we are done
+    if flippedAlgizCount > flippedAlgizDuration then
+        flippedAlgizCount = nil
+        flippedAlgizDuration = nil
+        flippedAlgizPlayer = nil
+        return
+    end
+
+    --only decrement once every second
+    if flippedAlgizCount % 30 == 0 then
+        FlippedAlgizAbility(flippedAlgizPlayer, flippedAlgizCount, flippedAlgizDuration)  
+    end
+    flippedAlgizCount = flippedAlgizCount + 1
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, Runes.FlippedAlgizOnUpdate)
+
+function FlippedAlgizAbility(player, count, duration)
+    
+    if duration == 0 or startTearsMult*duration == 0 then
+        return
+    end
+    tearsMult = startTearsMult * (1 - count/(startTearsMult*duration))
+    luckToAdd = startLuckToAdd * (1 - count/duration)
+
+
+    player:AddCacheFlags(CacheFlag.CACHE_FIREDELAY)
+    player:AddCacheFlags(CacheFlag.CACHE_LUCK)
+
+    player:EvaluateItems()
+end
+
 --BLANK RUNE?: return flipped rune id based on the id of the normal rune
 function GetFlippedIdFromNormal(subType)
 
@@ -1318,6 +1384,16 @@ function Runes:DontMimic(_, _, player)
 end
 
 mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, Runes.DontMimic, CollectibleType.COLLECTIBLE_CLEAR_RUNE)
+
+--BLACK RUNE?: resets globals
+function Runes:FlippedBlackResetGlobals(isContinued)
+    isContinued = isContinued or false
+    if isContinued == false then
+        numRecycles = -1
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, Runes.FlippedBlackResetGlobals)
 
 --GENERIC: given a function and number of frames, call the function after that many frames pass
 function DelayFunc(frames, func, ...)
