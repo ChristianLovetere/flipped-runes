@@ -79,6 +79,7 @@ end
 local numTotalCollectibles = numModdedCollectibles + CollectibleType.NUM_COLLECTIBLES
 
 if EID then
+
     EID:addCard(flippedHagalazID, "Fills all pits in the room#Pits stay filled even if the room is exited", "Hagalaz?", "en_us")
     EID:addCard(flippedJeraID, "Rerolls {{Coin}}, {{Bomb}}, {{Key}}, and {{HalfHeart}}/{{Heart}} into other variants of their pickup type#{{Shop}} Works on pickups that are for sale", "Jera?", "en_us")
     EID:addCard(flippedEhwazID, "{{DemonBeggar}} Teleports Isaac to the Black Market#Spawns a {{Card1}} Fool Card inside the Black Market after teleporting", "Ehwaz?", "en_us")
@@ -92,25 +93,23 @@ if EID then
     EID:addCard(crackedFlippedBlackID, "Creates 1-3 {{Card}}, {{Pill}}, and {{Battery}}, 2-3 times#!!! Explodes after a short delay when dropped#{{Collectible263}} Can't be mimicked by Clear Rune", "Black Rune..?", "en_us")
     EID:addCard(brokenFlippedBlackID, "Creates 1-2 {{Chest}}, {{BlackSack}}, and {{Heart}}, 2-3 times#!!! Explodes after a short delay when dropped#{{Collectible263}} Can't be mimicked by Clear Rune", "Black Rune...", "en_us")
     EID:addCard(shiningFlippedBlackID, "!!! Likely to explode and spawn bombs around Isaac, lighting enemies ablaze with a high damage burning effect# Small chance to create 2-3 {{ColorYellow}}Trinkets{{CR}}, {{GoldenKey}}, {{GoldenBomb}}, and {{CoinHeart}} instead, without consuming the rune#!!! Explodes after a short delay when dropped#{{Collectible263}} Can't be mimicked by Clear Rune", "Black Rune!?", "en_us")
-
     
-    local flippedJeraSprite = Sprite()
-    local flippedEhwazSprite = Sprite()
-    local flippedDagazSprite = Sprite()
-    local flippedAnsuzSprite = Sprite()
-    local flippedPerthroSprite = Sprite()
-    local flippedBerkanoSprite = Sprite()
-    local flippedAlgizSprite = Sprite()
-    local flippedBlankSprite = Sprite()
-    local flippedBlackSprite = Sprite()
-    local crackedFlippedBlackSprite = Sprite()
-    local brokenFlippedBlackSprite = Sprite()
-    local shiningFlippedBlackSprite = Sprite()
-
-    local flippedHagalazSprite = Sprite()
-    flippedHagalazSprite:Load("gfx/eid_inline_icons.anm2", true)
-    EID:addIcon("Card"..flippedHagalazID, "flippedRune1", 0, 18, 23, 38, 3, flippedHagalazSprite)
-
+    local eidSprite = Sprite()
+    eidSprite:Load("gfx/eid_icons.anm2", true)
+    EID:addIcon("Card"..flippedHagalazID, "flippedRune1", -1, 18, 23, 5, 7, eidSprite)
+    EID:addIcon("Card"..flippedJeraID, "flippedRune1", -1, 18, 23, 5, 7, eidSprite)
+    EID:addIcon("Card"..flippedEhwazID, "flippedRune1", -1, 18, 23, 5, 7, eidSprite)
+    EID:addIcon("Card"..flippedDagazID, "flippedRune1", -1, 18, 23, 5, 7, eidSprite)
+    EID:addIcon("Card"..flippedAnsuzID, "flippedRune2", -1, 18, 23, 5, 6, eidSprite)
+    EID:addIcon("Card"..flippedPerthroID, "flippedRune2", -1, 18, 23, 5, 6, eidSprite)
+    EID:addIcon("Card"..flippedBerkanoID, "flippedRune2", -1, 18, 23, 5, 6, eidSprite)
+    EID:addIcon("Card"..flippedAlgizID, "flippedRune2", -1, 18, 23, 5, 6, eidSprite)
+    EID:addIcon("Card"..flippedBlankID, "flippedRune2", -1, 18, 23, 5, 6, eidSprite)
+    EID:addIcon("Card"..flippedBlackID, "flippedRuneBlack", -1, 18, 23, 5, 7, eidSprite)
+    EID:addIcon("Card"..crackedFlippedBlackID, "crackedFlippedRuneBlack", -1, 18, 23, 5, 7, eidSprite)
+    EID:addIcon("Card"..brokenFlippedBlackID, "brokenFlippedRuneBlack", -1, 18, 23, 5, 7, eidSprite)
+    EID:addIcon("Card"..shiningFlippedBlackID, "shiningFlippedRuneBlack", -1, 18, 23, 5, 7, eidSprite)
+    
     local function blackCandleModifierCondition(descObj)
         if descObj.ObjType == EntityType.ENTITY_PICKUP and descObj.ObjVariant == PickupVariant.PICKUP_COLLECTIBLE and descObj.ObjSubType == CollectibleType.COLLECTIBLE_BLACK_CANDLE then
             local numPlayers = Game():GetNumPlayers()
@@ -125,7 +124,7 @@ if EID then
     end
 
     local function blackCandleModifierCallback(descObj)
-        EID:appendToDescription(descObj, "# Allows Algiz? to open a path to the {{UltraSecretRoom}} Ultra Secret Room on use")
+        EID:appendToDescription(descObj, "#{{Card"..flippedAnsuzID.."}} Allows Ansuz? to open a path to the {{UltraSecretRoom}} Ultra Secret Room on use")
         return descObj
     end
 
@@ -134,6 +133,10 @@ end
 
 function Runes:UseFlippedHagalaz()
 
+    if GiantBookAPI then
+        GiantBookAPI.playGiantBook("Appear", "flippedHagalaz.png", Color(0, 1, 1), Color(0, 1, 1), Color(0, 1, 1), nil, true)
+    end
+    
     local pitLocations = {}
     local level = Game():GetLevel()
     local room = Game():GetRoom()
