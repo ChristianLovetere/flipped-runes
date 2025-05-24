@@ -3,7 +3,7 @@ local mod = FlippedRunes
 local Runes = {}
 
 include("unstackableVanillaItems")
-include("eid_support")
+
 
 local flippedHagalazID = Isaac.GetCardIdByName("Hagalaz?")
 local flippedJeraID = Isaac.GetCardIdByName("Jera?")
@@ -18,6 +18,35 @@ local flippedBlackID = Isaac.GetCardIdByName("Black Rune?")
 local crackedFlippedBlackID = Isaac.GetCardIdByName("Black Rune..?")
 local brokenFlippedBlackID = Isaac.GetCardIdByName("Black Rune...")
 local shiningFlippedBlackID = Isaac.GetCardIdByName("Black Rune!?")
+
+local flippedHagalazSfx = Isaac.GetSoundIdByName("flippedHagalaz")
+local flippedJeraSfx = Isaac.GetSoundIdByName("flippedJera")
+local flippedEhwazSfx = Isaac.GetSoundIdByName("flippedEhwaz")
+local flippedDagazSfx = Isaac.GetSoundIdByName("flippedDagaz")
+local flippedAnsuzSfx = Isaac.GetSoundIdByName("flippedAnsuz")
+local flippedPerthroSfx = Isaac.GetSoundIdByName("flippedPerthro")
+local flippedBerkanoSfx = Isaac.GetSoundIdByName("flippedBerkano")
+local flippedAlgizSfx = Isaac.GetSoundIdByName("flippedAlgiz")
+local flippedBlackSfx = Isaac.GetSoundIdByName("flippedBlack")
+
+local runeColor = Color(0.355/2,.601/2,.554/2)
+
+--misc globals
+local activeCoroutines = {}
+local sfx = SFXManager()
+local forceProceedCoroutines = false
+local coroutineNumber = 1
+
+local numModdedCollectibles
+
+for id = CollectibleType.NUM_COLLECTIBLES + 1, 10000000 do
+    if not Isaac.GetItemConfig():GetCollectible(id) then
+        numModdedCollectibles = id - CollectibleType.NUM_COLLECTIBLES - 1
+        break
+    end
+end
+
+local numTotalCollectibles = numModdedCollectibles + CollectibleType.NUM_COLLECTIBLES
 
 --Hagalaz? globals
 local floorColorPulseCounter = nil
@@ -48,6 +77,9 @@ local flippedAnsuzActive = false
 local flippedAnsuzCounter = 0
 local flippedAnsuzDuration = 30
 local previousCurses = 0
+local damageTakenThisFloor = false
+local ansuzBossRoom
+local ansuzInBossRoom = false
 
 --Algiz? globals
 local tearsMult = 1.0
@@ -61,30 +93,13 @@ local flippedAlgizDuration = nil
 --Black Rune? globals
 local numRecycles = -1
 
---misc globals
-local activeCoroutines = {}
-local sfx = SFXManager()
-local forceProceedCoroutines = false
-local coroutineNumber = 1
-
-local numModdedCollectibles
-
-for id = CollectibleType.NUM_COLLECTIBLES + 1, 10000000 do
-    if not Isaac.GetItemConfig():GetCollectible(id) then
-        numModdedCollectibles = id - CollectibleType.NUM_COLLECTIBLES - 1
-        break
-    end
-end
-
-local numTotalCollectibles = numModdedCollectibles + CollectibleType.NUM_COLLECTIBLES
-
 if EID then
 
     EID:addCard(flippedHagalazID, "Fills all pits in the room#Pits stay filled even if the room is exited", "Hagalaz?", "en_us")
     EID:addCard(flippedJeraID, "Rerolls {{Coin}}, {{Bomb}}, {{Key}}, and {{HalfHeart}}/{{Heart}} into other variants of their pickup type#{{Shop}} Works on pickups that are for sale", "Jera?", "en_us")
     EID:addCard(flippedEhwazID, "{{DemonBeggar}} Teleports Isaac to the Black Market#Spawns a {{Card1}} Fool Card inside the Black Market after teleporting", "Ehwaz?", "en_us")
     EID:addCard(flippedDagazID, "\2 Adds a random {{ColorPurple}}curse{{CR}} to the current floor#\1 For the rest of the floor, enemies have a chance to be debuffed when a room is entered# The chance for a debuff increases with the number of active curses#{{Card35}} Dagaz grants an extra {{HalfSoulHeart}} per curse added by this rune", "Dagaz?", "en_us")
-    EID:addCard(flippedAnsuzID, "{{CurseLostSmall}} Adds Curse of the Lost to the current floor unless Isaac has {{Collectible260}} Black Candle#{{UltraSecretRoom}} If the floor's Curse of the Lost is removed or Isaac has {{Collectible260}} Black Candle, the Ultra Secret Room will be revealed and a path to it will be opened", "Ansuz?", "en_us")
+    EID:addCard(flippedAnsuzID, "{{CurseLostSmall}} Adds Curse of the Lost to the current floor#{{Card35}} A Dagaz rune will drop after the boss is killed if no damage was taken this floor#{{UltraSecretRoom}} If the floor's Curse of the Lost is removed in any way, the Ultra Secret Room will be revealed and a path to it will be opened", "Ansuz?", "en_us")
     EID:addCard(flippedPerthroID, "Rerolls items in the room into items Isaac already owns# Avoids rerolling into vanilla items that have no benefit when duplicated, including active items #{{Blank}} (except {{Collectible297}},{{Collectible515}},{{Collectible490}},{{Collectible628}})# If Isaac has no eligible items, rerolls into a random item from the current room's pool", "Perthro?", "en_us")
     EID:addCard(flippedBerkanoID, "\2 Removes up to 2 vanilla familiars#\1 Spawns an item from the current room's pool for each familiar removed", "Berkano?", "en_us")
     EID:addCard(flippedAlgizID, "{{BrokenHeart}} +1 Broken Heart#{{Timer}} Wears off over 40 seconds:#\1 x2 Tears multiplier#\1 +10 Luck#Using Algiz? again while it's already active will reset the timer", "Algiz?", "en_us")
@@ -110,7 +125,7 @@ if EID then
     EID:addIcon("Card"..brokenFlippedBlackID, "brokenFlippedRuneBlack", -1, 18, 23, 5, 7, eidSprite)
     EID:addIcon("Card"..shiningFlippedBlackID, "shiningFlippedRuneBlack", -1, 18, 23, 5, 7, eidSprite)
     
-    local function blackCandleModifierCondition(descObj)
+    local function BlackCandleModifierCondition(descObj)
         if descObj.ObjType == EntityType.ENTITY_PICKUP and descObj.ObjVariant == PickupVariant.PICKUP_COLLECTIBLE and descObj.ObjSubType == CollectibleType.COLLECTIBLE_BLACK_CANDLE then
             local numPlayers = Game():GetNumPlayers()
             for i = 0, numPlayers do
@@ -128,15 +143,38 @@ if EID then
         return descObj
     end
 
-    EID:addDescriptionModifier("BlackCandleAnsuz?", blackCandleModifierCondition, blackCandleModifierCallback)
-end
+    EID:addDescriptionModifier("BlackCandleAnsuz?", BlackCandleModifierCondition, blackCandleModifierCallback)
 
-function Runes:UseFlippedHagalaz()
+    local function FlippedAnsuzModifierCondition(descObj)
+        if descObj.ObjType == EntityType.ENTITY_PICKUP and descObj.ObjVariant == PickupVariant.PICKUP_TAROTCARD and descObj.ObjSubType == flippedAnsuzID then
+            local numPlayers = Game():GetNumPlayers()
+            for i = 0, numPlayers do
+                local player = Isaac.GetPlayer(i)
+                if player:HasCollectible(CollectibleType.COLLECTIBLE_BLACK_CANDLE) then
+                    return true
+                end
+            end
+        end
+    end
 
-    if GiantBookAPI then
-        GiantBookAPI.playGiantBook("Appear", "flippedHagalaz.png", Color(0, 1, 1), Color(0, 1, 1), Color(0, 1, 1), nil, true)
+    local function FlippedAnsuzModifierCallback(descObj)
+        EID:appendToDescription(descObj, "#{{Collectible260}} Black Candle lets Ansuz? bypass all other conditions and open the {{UltraSecretRoom}} Ultra Secret Room immediately")
+        return descObj
     end
     
+    EID:addDescriptionModifier("Ansuz?BlackCandle", FlippedAnsuzModifierCondition, FlippedAnsuzModifierCallback)
+end
+
+
+function Runes:UseFlippedHagalaz()
+    
+    if GiantBookAPI then
+        if REPENTANCE_PLUS then
+            GiantBookAPI.playGiantBook("Appear", "flippedHagalaz.png", runeColor, runeColor, runeColor, flippedHagalazSfx, false)
+        elseif REPENTANCE then
+            GiantBookAPI.playGiantBook("Appear", "flippedHagalaz.png", runeColor, runeColor, runeColor, flippedHagalazSfx, false)
+        end
+    end
     local pitLocations = {}
     local level = Game():GetLevel()
     local room = Game():GetRoom()
@@ -222,10 +260,14 @@ end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedDagaz, flippedDagazID)
 
---redesign
+--Adds curse of the lost to the floor. If you manage to get rid of it, reveals and opens the usr
+--beating the entire floor without any non-self damage will make the boss drop a Dagaz rune
+--having black candle causes the rune to reveal and open the usr directly
 ---@param player EntityPlayer
 function Runes:UseFlippedAnsuz(_, player, _)
 
+    ansuzBossRoom = GetCorrectBossRoom()
+    print(ansuzBossRoom)
     local level = Game():GetLevel()
     if player:HasCollectible(CollectibleType.COLLECTIBLE_BLACK_CANDLE) then
         Isaac.RunCallback("POST_REMOVE_CURSE_OF_LOST")
@@ -805,11 +847,11 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.GetSoulHeartsToAddOnUseDagaz, Ca
 --ANSUZ?: Finds and opens a path to the Usr from all valid rooms that are 2 away from it, reveals usr on map
 function Runes:OpenPathToUsr()
     
+    sfx:Play(SoundEffect.SOUND_GOLDENKEY)
+
     local level = Game():GetLevel()
 
     local usrIndex = level:QueryRoomTypeIndex(RoomType.ROOM_ULTRASECRET, true, RNG(), true)
-
-    print("usr: " .. tostring(usrIndex))
 
     if usrIndex and usrIndex ~= -1 then
         level:GetRoomByIdx(usrIndex).DisplayFlags = 100
@@ -863,7 +905,6 @@ function Runes:OpenPathToUsr()
         local roomDesc = level:GetRoomByIdx(cornerRoomLocations[i])
         if roomDesc.SafeGridIndex ~= -1 and roomDesc.Data ~= nil and roomDesc.Data.Shape ~= nil then
             safeGridIndices[roomDesc.SafeGridIndex] = roomDesc.Data.Shape
-            print("added safeIndex " .. tostring(roomDesc.SafeGridIndex) .. " with shape " .. tostring(roomDesc.Data.Shape) .. " to bucket")
         end
     end
 
@@ -876,51 +917,42 @@ function Runes:OpenPathToUsr()
         column, row = GetColumnAndRow(safeGridIndex)
 
         if column == usrColumn and row < usrRow then
-            print(tostring(safeGridIndex) .. ": north of Usr")
             if roomShape == RoomShape.ROOMSHAPE_LTL then
                 doorToOpen = DoorSlot.DOWN1
             else
                 doorToOpen = DoorSlot.DOWN0
             end
         elseif column > usrColumn and row == usrRow then 
-            print(tostring(safeGridIndex) .. ": east of Usr")
             doorToOpen = DoorSlot.LEFT0
         elseif column == usrColumn and row > usrRow then 
-            print(tostring(safeGridIndex) .. ": south of Usr")
             if roomShape == RoomShape.ROOMSHAPE_LTL then
                 doorToOpen = DoorSlot.UP1
             else
                 doorToOpen = DoorSlot.UP0
             end
         elseif column < usrColumn and row == usrRow then
-            print(tostring(safeGridIndex) .. ": west of Usr")
             doorToOpen = DoorSlot.RIGHT0
         elseif column < usrColumn and row < usrRow then
-            print(tostring(safeGridIndex) .. ": northWest of Usr")
             if roomShape == RoomShape.ROOMSHAPE_1x1 or roomShape == RoomShape.ROOMSHAPE_1x2 then
                 doorToOpen = DoorSlot.DOWN0
             else
                 doorToOpen = DoorSlot.DOWN1
             end
         elseif column < usrColumn and row > usrRow then
-            print(tostring(safeGridIndex) .. ": southWest of Usr")
             if roomShape == RoomShape.ROOMSHAPE_1x1 or roomShape == RoomShape.ROOMSHAPE_1x2 then
                 doorToOpen = DoorSlot.UP0
             else
                 doorToOpen = DoorSlot.UP1
             end
         elseif column > usrColumn and row > usrRow then
-            print(tostring(safeGridIndex) .. ": southEast of Usr")
             doorToOpen = DoorSlot.UP0
         elseif column > usrColumn and row < usrRow then
-            print(tostring(safeGridIndex) .. ": northEast of Usr")
             if roomShape == RoomShape.ROOMSHAPE_1x1 or roomShape == RoomShape.ROOMSHAPE_2x1 then
                 doorToOpen = DoorSlot.LEFT0
             else
                 doorToOpen = DoorSlot.LEFT1
             end
         end
-        print(tostring(safeGridIndex) .. ": Opening door " .. tostring(doorToOpen))
         level:MakeRedRoomDoor(safeGridIndex, doorToOpen)
     end
     level:UpdateVisibility()
@@ -948,7 +980,6 @@ function Runes:FlippedAnsuzDetectCurseChange()
     if flippedAnsuzActive then
         if flippedAnsuzCounter == flippedAnsuzDuration then
             local currentCurses = Game():GetLevel():GetCurses()
-            --print("current: " .. tostring(currentCurses & LevelCurse.CURSE_OF_THE_LOST) .. " prev: " .. tostring(previousCurses & LevelCurse.CURSE_OF_THE_LOST))
             if currentCurses & LevelCurse.CURSE_OF_THE_LOST == 0 and previousCurses & LevelCurse.CURSE_OF_THE_LOST ~= 0 then
                 Isaac.RunCallback("POST_REMOVE_CURSE_OF_LOST")
             end
@@ -961,11 +992,126 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_UPDATE, Runes.FlippedAnsuzDetectCurseChange)
 
+--ANSUZ?: Turn global to true when any damage is taken this floor
+function Runes:DetectPlayerDamageTakenThisFloor(_, _, damageFlag)
+    --if not self damage
+    if damageFlag & DamageFlag.DAMAGE_NO_PENALTIES == 0 then
+        damageTakenThisFloor = true
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, Runes.DetectPlayerDamageTakenThisFloor, EntityType.ENTITY_PLAYER)
+
+--ANSUZ?: returns the SafeGridIndex of the 'true' boss room for the floor.
+--For most floors this is simply the boss, for XL it is the second boss, and for the Void floor,
+--it is Delirium's room. If theres more than 2 boss rooms but none are 2x2, it returns the SafeGridIndex
+--of a random boss room.
+function GetCorrectBossRoom()
+
+    local level = Game():GetLevel()
+
+    local bossRooms = {}
+
+    local rooms = level:GetRooms()
+
+    for i = 0, rooms.Size do
+        local room = rooms:Get(i)
+        if room ~= nil and room.Data.Type ~= nil and room.SafeGridIndex ~= -1 then
+            if room.Data.Type == RoomType.ROOM_BOSS then
+                print("Found boss room at " .. tostring(room.SafeGridIndex))
+                table.insert(bossRooms, room.SafeGridIndex)
+            end
+        end
+    end
+
+    --if one boss room, return it
+    if #bossRooms == 1 then
+        return bossRooms[1]
+
+    --if two, we are on XL floor, and have to find which is final
+    elseif #bossRooms == 2 then
+
+        --indices of possible nearby rooms
+        local nearbyRoomIndices = {
+            -1, -13, 1, 13
+        }
+
+        --var to store nearby rooms for both boss rooms
+        local bossRoom1NearbyValidRooms = 0
+        local bossRoom2NearbyValidRooms = 0
+        
+        --increment nearbyValidRooms for both
+        for i = 1, #nearbyRoomIndices do
+            local nearbyRoomDesc1 = level:GetRoomByIdx(bossRooms[1]+nearbyRoomIndices[i], 0)
+            if nearbyRoomDesc1.Data ~= nil then
+                bossRoom1NearbyValidRooms = bossRoom1NearbyValidRooms + 1
+            end
+            local nearbyRoomDesc2 = level:GetRoomByIdx(bossRooms[2]+nearbyRoomIndices[i], 0)
+            if nearbyRoomDesc2.Data ~= nil then
+                bossRoom2NearbyValidRooms = bossRoom2NearbyValidRooms + 1
+            end
+        end
+
+        if bossRoom1NearbyValidRooms < bossRoom2NearbyValidRooms then
+            return bossRooms[1]
+        else
+            return bossRooms[2]
+        end
+
+    --if > two, we are either on Void or some modded floor
+    else
+        --find deli room by all 8 door flags being true
+        for i = 1, #bossRooms do
+            local roomDesc = level:GetRoomByIdx(bossRooms[i], 0)
+            if roomDesc.Data.Doors == 255 then
+                return bossRooms[i]
+            end
+        end
+
+        --if no deli room found, just return a random boss room
+        return bossRooms[math.random(#bossRooms)]
+    end
+end
+
+function Runes:FlippedAnsuzEnableDagazDrop()
+    if Game():GetLevel():GetCurrentRoomDesc().SafeGridIndex == ansuzBossRoom then
+        ansuzInBossRoom = true
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.FlippedAnsuzEnableDagazDrop)
+
+function Runes:FlippedAnsuzDropDagaz()
+
+    if ansuzInBossRoom then
+        if Game():GetLevel():GetCurrentRoomDesc().Clear then
+            if not damageTakenThisFloor then
+
+                local room = Game():GetRoom()
+                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.REVERSE_EXPLOSION, 0, room:GetCenterPos(), Vector(0,0), nil)
+                DelayFunc(33, SpawnDagazCenterRoom, room)
+            end
+
+            ansuzInBossRoom = false
+            ansuzBossRoom = nil
+        end
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, Runes.FlippedAnsuzDropDagaz)
+
+function SpawnDagazCenterRoom(room)
+    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.RUNE_DAGAZ, room:GetCenterPos(), Vector(0,0), nil)
+end
+
 function Runes:FlippedAnsuzResetGlobals(isContinued)
     isContinued = isContinued or false
     if isContinued == false then
         previousCurses = 0
         flippedAnsuzActive = false
+        damageTakenThisFloor = false
+        ansuzInBossRoom = false
+        ansuzBossRoom = nil
     end
 end
 
@@ -984,7 +1130,6 @@ function GetPlayerCollectibles(player)
             for i = 1, amount do
                 table.insert(ownedCollectibles, id)
             end
-            --print("added item with id " .. tostring(id) .. " , " .. tostring(amount) .. " times.")
         end
     end
 
@@ -1407,7 +1552,6 @@ function DelayFunc(frames, func, ...)
         while Game():GetFrameCount() < startFrame + frames and forceProceedCoroutines == false do
             coroutine.yield() --pause until enough frames pass
         end
-        --print("cor #" .. tostring(coroutineNumber))
         coroutineNumber = coroutineNumber + 1
         func(table.unpack(args)) --execute function after delay
     end)

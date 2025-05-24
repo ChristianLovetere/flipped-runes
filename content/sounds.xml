@@ -1,0 +1,29 @@
+<sounds root="sfx/">
+    <sound name="flippedHagalaz">
+        <sample weight ="1" path="voiceover/flippedHagalaz.wav" />
+    </sound>
+    <sound name="flippedJera">
+        <sample weight ="1" path="voiceover/flippedJera.wav" />
+    </sound>
+    <sound name="flippedEhwaz">
+        <sample weight ="1" path="voiceover/flippedEhwaz.wav" />
+    </sound>
+    <sound name="flippedDagaz">
+        <sample weight ="1" path="voiceover/flippedDagaz.wav" />
+    </sound>
+    <sound name="flippedAnsuz">
+        <sample weight ="1" path="voiceover/flippedAnsuz.wav" />
+    </sound>
+    <sound name="flippedPerthro">
+        <sample weight ="1" path="voiceover/flippedPerthro.wav" />
+    </sound>
+    <sound name="flippedBerkano">
+        <sample weight ="1" path="voiceover/flippedBerkano.wav" />
+    </sound>
+    <sound name="flippedAlgiz">
+        <sample weight ="1" path="voiceover/flippedAlgiz.wav" />
+    </sound>
+    <sound name="flippedBlack">
+        <sample weight ="1" path="voiceover/flippedBlack.wav" />
+    </sound>
+</sounds>
