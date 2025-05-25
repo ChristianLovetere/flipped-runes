@@ -14,6 +14,9 @@ Dagaz? - Adds a random curse and a chance to add status effects to enemies when 
 - The chance for a status effect increases with amount of curses
 
 Ansuz? - reveals all 3 secret rooms (WILL BE REWORKED)
+- Adds curse of the lost to the floor. If you manage to get rid of it, reveals and opens the Ultra Secret Room
+- beating the entire floor without getting hit will make the boss drop a Dagaz rune
+- having black candle causes this rune to reveal and open the Ultra Secret Room immediately upon use
 
 Perthro? - Rerolls items in the room into items the player already owns
 - Having multiple copies of an item increases its chances of being chosen

@@ -89,7 +89,7 @@ function Runes:FlippedDagazActiveOnNewRoom()
     end
 
     for _, entity in ipairs(Isaac.GetRoomEntities()) do
-        if entity and IsMonster(entity) then
+        if entity and FlippedRunes:IsMonster(entity) then
             ApplyRandomStatusEffect(entity, flippedDagazPlayer)
         end
     end

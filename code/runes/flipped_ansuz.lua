@@ -280,7 +280,7 @@ function Runes:FlippedAnsuzDropDagaz()
 
                 local room = Game():GetRoom()
                 Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.REVERSE_EXPLOSION, 0, room:GetCenterPos(), Vector(0,0), nil)
-                DelayFunc(33, SpawnDagazCenterRoom, room)
+                FlippedRunes:DelayFunc(33, SpawnDagazCenterRoom, room)
             end
 
             ansuzInBossRoom = false

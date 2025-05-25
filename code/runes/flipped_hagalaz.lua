@@ -13,6 +13,8 @@ local floorColorPulseRo, floorColorPulseGo, floorColorPulseBo
 local roomIndicesWithPitsRemoved = {}
 local hagalazUsedThisFloor = false
 
+local RuneColor = mod.RuneColor
+
 function Runes:UseFlippedHagalaz()
     
     if GiantBookAPI then

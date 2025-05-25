@@ -82,7 +82,7 @@ function Runes:UseShiningFlippedBlack(_, player, _)
     else
 
         for _, entity in ipairs(Isaac.GetRoomEntities()) do
-            if entity and IsMonster(entity) then
+            if entity and FlippedRunes:IsMonster(entity) then
                 entity:AddBurn(EntityRef(player), 130, Game():GetLevel():GetStage()*8)
             end
         end
@@ -90,10 +90,10 @@ function Runes:UseShiningFlippedBlack(_, player, _)
         Isaac.Explode(player.Position, player, 100)
         SpawnRockBreakEffect(player.Position, 10, 2)
         DoBombRing(player, BombVariant.BOMB_MR_MEGA, 5, 5, 70)
-        DelayFunc(5, SpawnRockBreakEffect, player.Position, 10, 1.5)
-        DelayFunc(5, DoBombRing, player, BombVariant.BOMB_NORMAL, 5, 6, 60, 24)
-        DelayFunc(10, SpawnRockBreakEffect, player.Position, 10, 1)
-        DelayFunc(10, DoBombRing, player, BombVariant.BOMB_SMALL, 5, 7, 45, 48)
+        FlippedRunes:DelayFunc(5, SpawnRockBreakEffect, player.Position, 10, 1.5)
+        FlippedRunes:DelayFunc(5, DoBombRing, player, BombVariant.BOMB_NORMAL, 5, 6, 60, 24)
+        FlippedRunes:DelayFunc(10, SpawnRockBreakEffect, player.Position, 10, 1)
+        FlippedRunes:DelayFunc(10, DoBombRing, player, BombVariant.BOMB_SMALL, 5, 7, 45, 48)
 
         Game():ShakeScreen(20)
         SpawnRedPoofEffect(player.Position)
@@ -170,7 +170,7 @@ mod:AddCallback(ModCallbacks.MC_GET_CARD, Runes.RerollCrackedBlackRunes)
 
 --BLACK RUNE?: calls SelfDestructCrackedBlackRunes with a delay so the rune appears to explode when it hits the ground
 function Runes:DelaySelfDestructCrackedBlackRunes(pickup)
-    DelayFunc(25, SelfDestructCrackedBlackRunes, pickup)
+    FlippedRunes:DelayFunc(25, SelfDestructCrackedBlackRunes, pickup)
 end
 
 mod:AddCallback(ModCallbacks.MC_POST_PICKUP_INIT, Runes.DelaySelfDestructCrackedBlackRunes)
