@@ -64,7 +64,7 @@ function Runes:UseFlippedPerthro(_, player, _)
                 until newItem and (not itemConfig:GetCollectible(newItem):HasTags(ItemConfig.TAG_QUEST)) and CollectibleIsStackable(newItem)
 
                 collectible:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, newItem, true)
-                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, 0, collectible.Position, Vector(0,0), nil)               
+                Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, collectible.Position, Vector(0,0), nil, 0, mod:SafeRandom())               
             end
         end
     end

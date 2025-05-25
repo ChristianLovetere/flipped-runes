@@ -4,7 +4,7 @@ A mod for The Binding of Isaac: Repentance(+) that adds flipped versions of all 
 Hagalaz? - Fills all pits in the room
 - Pits stay filled even if the room is exited
 
-Jera? - Rerolls pennies, bombs, keys, half red hearts and full red hearts into other variants of their specific pickup type
+Jera? - Rerolls pennies, bombs, keys, half red hearts and full red hearts into other variants of their pickup type
 - Works on pickups that are for sale
 
 Ehwaz? - Teleports Isaac to the Black Market 
@@ -13,8 +13,7 @@ Ehwaz? - Teleports Isaac to the Black Market
 Dagaz? - Adds a random curse and a chance to add status effects to enemies when walking into rooms for the current floor. 
 - The chance for a status effect increases with amount of curses
 
-Ansuz? - reveals all 3 secret rooms (WILL BE REWORKED)
-- Adds curse of the lost to the floor. If you manage to get rid of it, reveals and opens the Ultra Secret Room
+Ansuz? - Adds curse of the lost to the floor. If you manage to get rid of it, reveals and opens the Ultra Secret Room
 - beating the entire floor without getting hit will make the boss drop a Dagaz rune
 - having black candle causes this rune to reveal and open the Ultra Secret Room immediately upon use
 
@@ -31,4 +30,5 @@ Blank Rune? - Converts all rune pickups in the room into their flipped variants
 - Works on runes that are for sale
 
 Black Rune? - Creates a wide variety of pickups
+- Highly volatile!
 - Can't be mimicked by Clear Rune

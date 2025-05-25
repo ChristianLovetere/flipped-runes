@@ -282,7 +282,7 @@ function Runes:FlippedAnsuzDropDagaz()
             if not damageTakenThisFloor then
 
                 local room = Game():GetRoom()
-                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.REVERSE_EXPLOSION, 0, room:GetCenterPos(), Vector(0,0), nil)
+                Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.REVERSE_EXPLOSION, room:GetCenterPos(), Vector(0,0), nil, 0, mod:SafeRandom())
                 FlippedRunes:DelayFunc(33, SpawnDagazCenterRoom, room)
             end
 
@@ -295,7 +295,7 @@ end
 mod:AddCallback(ModCallbacks.MC_POST_UPDATE, Runes.FlippedAnsuzDropDagaz)
 
 function SpawnDagazCenterRoom(room)
-    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.RUNE_DAGAZ, room:GetCenterPos(), Vector(0,0), nil)
+    Game():Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, room:GetCenterPos(), Vector(0,0), nil, Card.RUNE_DAGAZ, mod:SafeRandom())
 end
 
 function Runes:OnRewind()

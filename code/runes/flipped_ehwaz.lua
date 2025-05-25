@@ -30,7 +30,7 @@ function Runes:OnEnterBlackMarket()
         shouldSpawnReturnCard = false
 
         local player = Isaac.GetPlayer(0)
-        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.CARD_FOOL, player.Position + Vector(0, 40), Vector(0,0), nil)
+        Game():Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, player.Position + Vector(0, 40), Vector(0,0), nil, Card.CARD_FOOL, mod:SafeRandom())
     end 
 end
 

@@ -19,6 +19,8 @@ local flippedAlgizCountBackup = nil
 ---@param player EntityPlayer
 function Runes:UseFlippedAlgiz(_, player, _)
 
+    mod:PlayOverlay("flippedAlgiz.png", mod.OverlayColors, flippedAlgizSfx)
+
     player:AddBrokenHearts(1)
     flippedAlgizPlayer = player
     flippedAlgizCount = 0

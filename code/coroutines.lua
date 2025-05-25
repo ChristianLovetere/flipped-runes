@@ -1,4 +1,5 @@
 local mod = FlippedRunes
+local Runes = {}
 
 --misc globals
 local activeCoroutines = {}
@@ -6,7 +7,7 @@ local forceProceedCoroutines = false
 local coroutineNumber = 1
 
 --GENERIC: given a function and number of frames, call the function after that many frames pass
-function FlippedRunes:DelayFunc(frames, func, ...)
+function mod:DelayFunc(frames, func, ...)
     local args = {...}
 
     local co = coroutine.create(function()
@@ -22,7 +23,7 @@ function FlippedRunes:DelayFunc(frames, func, ...)
 end
 
 --GENERIC: processes coroutines
-function FlippedRunes:ProcessCoroutines()
+function mod:ProcessCoroutines()
     for i = #activeCoroutines, 1, -1 do
         local status = coroutine.status(activeCoroutines[i])
 
@@ -34,16 +35,16 @@ function FlippedRunes:ProcessCoroutines()
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_UPDATE, FlippedRunes.ProcessCoroutines)
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, mod.ProcessCoroutines)
 
-function FlippedRunes:EnableCoroutinesToWaitOnUpdate()
+function mod:EnableCoroutinesToWaitOnUpdate()
     forceProceedCoroutines = false
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_UPDATE, FlippedRunes.EnableCoroutinesToWaitOnUpdate)
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, mod.EnableCoroutinesToWaitOnUpdate)
 
 --GENERIC: Attempts to filter out all non-monsters
-function FlippedRunes:IsMonster(entity)
+function mod:IsMonster(entity)
     if entity.IsActiveEnemy and 
     entity.IsVulnerableEnemy and 
     entity.Type ~= EntityType.ENTITY_PICKUP and 

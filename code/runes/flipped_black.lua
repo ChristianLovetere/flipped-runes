@@ -140,7 +140,7 @@ function DoBombRing(player, bombVariant, numBombs, speed, spawnRadius, angleOffs
         local angle = math.rad((i - 1) * (360/numBombs) + angleOffset)
         local bombPos = player.Position + Vector(math.cos(angle), math.sin(angle)) * spawnRadius
         local bombVelocity = Vector(math.cos(angle), math.sin(angle)) * speed
-        Isaac.Spawn(EntityType.ENTITY_BOMB, bombVariant, 0, bombPos, bombVelocity, player)
+        Game():Spawn(EntityType.ENTITY_BOMB, bombVariant, bombPos, bombVelocity, player, 0, mod:SafeRandom())
     end
 end
 
@@ -151,7 +151,7 @@ function Runes:DeleteCrackedBlackRunes()
             local pickup = entity:ToPickup()
             if pickup and (pickup.SubType == CrackedFlippedBlackID or pickup.SubType == BrokenFlippedBlackID or pickup.SubType == ShiningFlippedBlackID) then
                 pickup:Remove()
-                Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.BOMB_CRATER, 0, pickup.Position, Vector(0,0), nil)
+                Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.BOMB_CRATER, pickup.Position, Vector(0,0), nil, 0, mod:SafeRandom())
             end
         end
     end
@@ -196,7 +196,7 @@ function SpawnPickups(position, numPickups, intensity, pickupsList)
         local pickupVariant = selectedPickup[1]
         local subType = selectedPickup[2]
         local velocity = Vector(math.random(-3*intensity, 3*intensity), math.random(-3*intensity, 3*intensity))
-        local spawned = Isaac.Spawn(EntityType.ENTITY_PICKUP, pickupVariant, subType, position, velocity, nil)
+        local spawned = Game():Spawn(EntityType.ENTITY_PICKUP, pickupVariant, position, velocity, nil, subType, mod:SafeRandom())
         table.insert(pickupsSpawned, spawned)
     end
     return pickupsSpawned
@@ -206,18 +206,18 @@ end
 function SpawnRockBreakEffect(position, numRocks, intensity)
     for i = 1, numRocks do -- Spawn multiple rock fragments
         local velocity = Vector(math.random(-10*intensity, 10*intensity), math.random(-10*intensity, 10*intensity)) --randomized debris movement
-        Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.ROCK_PARTICLE, 0, position, velocity, nil)
+        Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.ROCK_PARTICLE, position, velocity, nil, 0, mod:SafeRandom())
     end
 end
 
 --BLACK RUNE?: causes a short red poof at position
 function SpawnRedPoofEffect(position)
-    Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF02, 0, position, Vector(0,0), nil)
+    Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF02, position, Vector(0,0), nil, 0, mod:SafeRandom())
 end
 
 --BLACK RUNE?: causes a short white glow at position
 function SpawnGlowEffect(position)
-    Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.GROUND_GLOW, 0, position, Vector(0,0), nil)
+    Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.GROUND_GLOW, position, Vector(0,0), nil, 0, mod:SafeRandom())
 end
 
 --BLACK RUNE?: Prevent black runes from being mimicked by Clear Rune

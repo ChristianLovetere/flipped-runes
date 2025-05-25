@@ -14,17 +14,9 @@ local roomIndicesWithPitsRemoved = {}
 local hagalazUsedThisFloor = false
 local hagalazUsedThisRoom = false
 
-local RuneColor = mod.RuneColor
-
 function Runes:UseFlippedHagalaz()
     
-    if GiantBookAPI then
-        if REPENTANCE_PLUS then
-            GiantBookAPI.playGiantBook("Appear", "flippedHagalaz.png", RuneColor, RuneColor, RuneColor, flippedHagalazSfx, false)
-        elseif REPENTANCE then
-            GiantBookAPI.playGiantBook("Appear", "flippedHagalaz.png", RuneColor, RuneColor, RuneColor, flippedHagalazSfx, false)
-        end
-    end
+    mod:PlayOverlay("flippedHagalaz.png", mod.OverlayColors, flippedHagalazSfx)
     local pitLocations = {}
     local level = Game():GetLevel()
     local room = Game():GetRoom()
@@ -45,7 +37,7 @@ function Runes:UseFlippedHagalaz()
     hagalazUsedThisRoom = true
     hagalazUsedThisFloor = true
     roomIndicesWithPitsRemoved[level:GetCurrentRoomDesc().GridIndex] = pitLocations
-    InitFloorColorPulse(0.355/2,.601/2,.554/2, 30.0)
+    InitFloorColorPulse(0.355/2,.601/2,.554/2, 60.0)
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedHagalaz, FlippedHagalazID)

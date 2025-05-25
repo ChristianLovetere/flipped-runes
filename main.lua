@@ -1,10 +1,12 @@
 FlippedRunes = RegisterMod("Flipped Runes", 1)
 local mod = FlippedRunes
+
 mod.RuneColor = Color(0.355/2,.601/2,.554/2)
 
 --Helpers
 include("code.unstackable_vanilla_items")
 include("code.coroutines")
+include("code.overlays")
 
 --Rune Logic
 include("code.runes.flipped_hagalaz")
@@ -20,3 +22,10 @@ include("code.runes.flipped_black")
 
 --Mod Compat
 include("code.eid_support")
+
+function mod:SafeRandom()
+    local rand
+    repeat rand = Random()
+    until rand ~= 0
+    return rand
+end

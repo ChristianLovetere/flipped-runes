@@ -48,8 +48,8 @@ function Runes:UseFlippedBerkano(_, player, _)
     end
     for i = 1, familiarsKilled do
         local collectibleID = itemPoolObj:GetCollectible(roomPool, true, rng:Next())
-        Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, collectibleID, familiarPositions[i], Vector(0,0), nil)
-        Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF04, 0, familiarPositions[i], Vector(0,0), nil)
+        Game():Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, familiarPositions[i], Vector(0,0), nil, collectibleID, mod:SafeRandom())
+        Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF04, familiarPositions[i], Vector(0,0), nil, 0, mod:SafeRandom())
     end
     
 end
