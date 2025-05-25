@@ -25,7 +25,7 @@ Perthro? - Rerolls items in the room into items the player already owns
 
 Berkano? - Removes up to 2 vanilla familiars and spawns an item from the current room's pool for each familiar removed
 
-Algiz? - tbd
+Algiz? - Gives +1 Broken Heart, and grants a 2x tears multiplier and +10 luck that wears off over 40 seconds
 
 Blank Rune? - Converts all rune pickups in the room into their flipped variants
 - Works on runes that are for sale

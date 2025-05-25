@@ -1,8 +1,6 @@
 FlippedRunes = RegisterMod("Flipped Runes", 1)
 local mod = FlippedRunes
-local Runes = {}
-
-FlippedRunes.RuneColor = Color(0.355/2,.601/2,.554/2)
+mod.RuneColor = Color(0.355/2,.601/2,.554/2)
 
 --Helpers
 include("code.unstackable_vanilla_items")

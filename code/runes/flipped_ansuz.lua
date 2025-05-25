@@ -11,7 +11,9 @@ local flippedAnsuzCounter = 0
 local flippedAnsuzDuration = 30
 local previousCurses = 0
 local damageTakenThisFloor = false
+local damageTakenThisFloorBackup = false
 local ansuzBossRoom
+local ansuzBossRoomBackup
 local ansuzInBossRoom = false
 
 --Adds curse of the lost to the floor. If you manage to get rid of it, reveals and opens the usr
@@ -21,6 +23,7 @@ local ansuzInBossRoom = false
 function Runes:UseFlippedAnsuz(_, player, _)
 
     ansuzBossRoom = GetCorrectBossRoom()
+    ansuzBossRoomBackup = ansuzBossRoom
     print(ansuzBossRoom)
     local level = Game():GetLevel()
     if player:HasCollectible(CollectibleType.COLLECTIBLE_BLACK_CANDLE) then
@@ -294,6 +297,20 @@ mod:AddCallback(ModCallbacks.MC_POST_UPDATE, Runes.FlippedAnsuzDropDagaz)
 function SpawnDagazCenterRoom(room)
     Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, Card.RUNE_DAGAZ, room:GetCenterPos(), Vector(0,0), nil)
 end
+
+function Runes:OnRewind()
+    ansuzBossRoom = ansuzBossRoomBackup
+    damageTakenThisFloor = damageTakenThisFloorBackup
+end
+
+mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, Runes.OnRewind, CollectibleType.COLLECTIBLE_GLOWING_HOUR_GLASS)
+
+function Runes:OnChangeRoom()
+    damageTakenThisFloorBackup = damageTakenThisFloor
+    print(damageTakenThisFloor)
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.OnChangeRoom)
 
 function Runes:FlippedAnsuzResetGlobals(isContinued)
     isContinued = isContinued or false

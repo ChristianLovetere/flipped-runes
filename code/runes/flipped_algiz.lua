@@ -13,6 +13,7 @@ local startLuckToAdd = 0.0
 local flippedAlgizPlayer
 local flippedAlgizCount = nil
 local flippedAlgizDuration = nil
+local flippedAlgizCountBackup = nil
 
 --adds one broken heart and grants x2 tears and +10 luck that fades away over 40 seconds
 ---@param player EntityPlayer
@@ -114,3 +115,18 @@ function FlippedAlgizAbility(player, count, duration)
 
     player:EvaluateItems()
 end
+
+function Runes:OnChangeRoom()
+    flippedAlgizCountBackup = flippedAlgizCount
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.OnChangeRoom)
+
+function Runes:OnRewind()
+    if flippedAlgizCountBackup ~= nil then
+        local restoredCount = (flippedAlgizCountBackup // 30) * 30
+        flippedAlgizCount = restoredCount
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, Runes.OnRewind, CollectibleType.COLLECTIBLE_GLOWING_HOUR_GLASS)

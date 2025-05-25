@@ -12,6 +12,7 @@ local floorColorPulseRo, floorColorPulseGo, floorColorPulseBo
 
 local roomIndicesWithPitsRemoved = {}
 local hagalazUsedThisFloor = false
+local hagalazUsedThisRoom = false
 
 local RuneColor = mod.RuneColor
 
@@ -41,6 +42,7 @@ function Runes:UseFlippedHagalaz()
         return
     end
 
+    hagalazUsedThisRoom = true
     hagalazUsedThisFloor = true
     roomIndicesWithPitsRemoved[level:GetCurrentRoomDesc().GridIndex] = pitLocations
     InitFloorColorPulse(0.355/2,.601/2,.554/2, 30.0)
@@ -130,6 +132,24 @@ function Runes:DiscretelyRemovePits()
 end
 
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.DiscretelyRemovePits)
+
+function Runes:ResetUsedThisRoom()
+    hagalazUsedThisRoom = false
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.ResetUsedThisRoom)
+
+function Runes:OnRewind()
+    if hagalazUsedThisRoom then
+        local roomIndex = Game():GetLevel():GetCurrentRoomDesc().GridIndex
+        if roomIndicesWithPitsRemoved[roomIndex] ~= nil then
+            roomIndicesWithPitsRemoved[roomIndex] = nil
+        end
+        hagalazUsedThisRoom = false
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, Runes.OnRewind, CollectibleType.COLLECTIBLE_GLOWING_HOUR_GLASS)
 
 --HAGALAZ?: Reset vars related to Hagalaz? ability
 function Runes:ResetHagalaz(isContinued)
