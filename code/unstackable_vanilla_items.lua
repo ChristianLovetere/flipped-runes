@@ -1,5 +1,5 @@
 function CollectibleIsStackable(collectible)
-    
+
     local nonStackableCollectibles = {
         [CollectibleType.COLLECTIBLE_SPOON_BENDER] = false,
         [CollectibleType.COLLECTIBLE_SKATOLE] = false,
