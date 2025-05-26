@@ -1,12 +1,13 @@
 local mod = FlippedRunes
-local Runes = {}
-
-FlippedJeraID = Isaac.GetCardIdByName("Jera?")
+local FlippedJera = {}
 
 local flippedJeraSfx = Isaac.GetSoundIdByName("flippedJera")
 
 --rerolls basic pickups into more advanced forms (less chance for coins)
-function Runes:UseFlippedJera()
+function FlippedJera:UseFlippedJera()
+
+    mod:PlayOverlay("flippedJera.png", mod.OverlayColors, flippedJeraSfx)
+
     local entities = Isaac.GetRoomEntities()
 
     for _, entity in ipairs(entities) do
@@ -29,7 +30,7 @@ function Runes:UseFlippedJera()
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedJera, FlippedJeraID)
+mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedJera.UseFlippedJera, mod.flippedJeraID)
 
 --JERA?: get a weighted random improved coin type
 function GetRefinedCoin()

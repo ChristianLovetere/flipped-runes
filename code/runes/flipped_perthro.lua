@@ -1,30 +1,29 @@
 local mod = FlippedRunes
-local Runes = {}
-
-FlippedPerthroID = Isaac.GetCardIdByName("Perthro?")
+local FlippedPerthro = {}
 
 local flippedPerthroSfx = Isaac.GetSoundIdByName("flippedPerthro")
 
 --Perthro? globals
-local numModdedCollectibles
+local g_numModdedCollectibles
 
 for id = CollectibleType.NUM_COLLECTIBLES + 1, 10000000 do
     if not Isaac.GetItemConfig():GetCollectible(id) then
-        numModdedCollectibles = id - CollectibleType.NUM_COLLECTIBLES - 1
+        g_numModdedCollectibles = id - CollectibleType.NUM_COLLECTIBLES - 1
         break
     end
 end
 
-local numTotalCollectibles = numModdedCollectibles + CollectibleType.NUM_COLLECTIBLES
+local g_numTotalCollectibles = g_numModdedCollectibles + CollectibleType.NUM_COLLECTIBLES
 
---Rerolls items in the room into items the player already owns
+--Rerolls items in the room into items the player already owns.
 --will generally avoid items that have no benefit when duplicated
 ---@param player EntityPlayer
-function Runes:UseFlippedPerthro(_, player, _)
+function FlippedPerthro:UseFlippedPerthro(_, player, _)
+
+    mod:PlayOverlay("flippedPerthro.png", mod.OverlayColors, flippedPerthroSfx)
 
     local playerCollectiblesOwned = GetPlayerCollectibles(player)    
 
-    local game = Game()
     local entities = Isaac.GetRoomEntities()
     local itemConfig = Isaac.GetItemConfig()
     local rng = RNG()
@@ -70,7 +69,7 @@ function Runes:UseFlippedPerthro(_, player, _)
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedPerthro, FlippedPerthroID)
+mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedPerthro.UseFlippedPerthro, mod.flippedPerthroID)
 
 --PERTHRO?: returns a list of all the collectibles the player has
 ---@param player EntityPlayer
@@ -78,7 +77,7 @@ function GetPlayerCollectibles(player)
 
     local ownedCollectibles = {}
 
-    for id = 1, numTotalCollectibles do
+    for id = 1, g_numTotalCollectibles do
         if player:HasCollectible(id, true) then
             local amount = player:GetCollectibleNum(id, true)
             for i = 1, amount do

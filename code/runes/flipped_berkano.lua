@@ -1,12 +1,12 @@
 local mod = FlippedRunes
-local Runes = {}
-
-FlippedBerkanoID = Isaac.GetCardIdByName("Berkano?")
+local FlippedBerkano = {}
 
 local flippedBerkanoSfx = Isaac.GetSoundIdByName("flippedBerkano")
 
 --deletes up to 2 vanilla familiars and turns them into items from the current room's pool
-function Runes:UseFlippedBerkano(_, player, _)
+function FlippedBerkano:UseFlippedBerkano(_, player, _)
+
+    mod:PlayOverlay("flippedBerkano.png", mod.OverlayColors, flippedBerkanoSfx)
 
     --find familiars to remove
     local entities = Isaac.GetRoomEntities()
@@ -54,60 +54,7 @@ function Runes:UseFlippedBerkano(_, player, _)
     
 end
 
-mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBerkano, FlippedBerkanoID)
-
---BERKANO?: returns false if trinket, quest, or otherwise ineligible familiars are detected
-function IsEligibleFamiliar(familiar)
-    local familiarVar = familiar.Variant
-    if familiarVar == FamiliarVariant.KEY_FULL or
-    familiarVar == FamiliarVariant.KEY_PIECE_1 or
-    familiarVar == FamiliarVariant.KEY_PIECE_2 or
-    familiarVar == FamiliarVariant.KNIFE_FULL or
-    familiarVar == FamiliarVariant.KNIFE_PIECE_1 or
-    familiarVar == FamiliarVariant.KNIFE_PIECE_2 or
-    familiarVar == FamiliarVariant.ISAACS_HEAD or
-    familiarVar == FamiliarVariant.BLUE_BABY_SOUL or
-    familiarVar == FamiliarVariant.EVES_BIRD_FOOT or
-    familiarVar == FamiliarVariant.BLUE_FLY or
-    familiarVar == FamiliarVariant.BLUE_SPIDER or
-    familiarVar == FamiliarVariant.DIP or
-    familiarVar == FamiliarVariant.MINISAAC or
-    familiarVar == FamiliarVariant.WISP or
-    familiarVar == FamiliarVariant.ITEM_WISP or
-    familiarVar == FamiliarVariant.BONE_SPUR or
-    familiarVar == FamiliarVariant.STAR_OF_BETHLEHEM or
-    familiarVar == FamiliarVariant.VANISHING_TWIN or
-    familiarVar == FamiliarVariant.FORGOTTEN_BODY or
-    familiarVar == FamiliarVariant.DECAP_ATTACK or
-    familiarVar == FamiliarVariant.PEEPER_2 or
-    familiarVar == FamiliarVariant.TINYTOMA_2 or
-    familiarVar == FamiliarVariant.SIREN_MINION or
-    familiarVar == FamiliarVariant.BABY_PLUM or
-    familiarVar == FamiliarVariant.SPIN_TO_WIN or
-    familiarVar == FamiliarVariant.GUILLOTINE or
-    familiarVar == FamiliarVariant.CUBE_OF_MEAT_2 or
-    familiarVar == FamiliarVariant.CUBE_OF_MEAT_3 or
-    familiarVar == FamiliarVariant.CUBE_OF_MEAT_4 or
-    familiarVar == FamiliarVariant.BALL_OF_BANDAGES_2 or
-    familiarVar == FamiliarVariant.BALL_OF_BANDAGES_3 or
-    familiarVar == FamiliarVariant.BALL_OF_BANDAGES_4 or
-    familiarVar == FamiliarVariant.SCISSORS or
-    familiarVar == FamiliarVariant.FLY_ORBITAL or
-    familiarVar == FamiliarVariant.SWARM_FLY_ORBITAL or
-    familiarVar == FamiliarVariant.ABYSS_LOCUST or
-    familiarVar == FamiliarVariant.SUPER_BUM or
-    familiarVar == FamiliarVariant.TONSIL or
-    familiarVar == FamiliarVariant.SPIDER_BABY or
-    familiarVar == FamiliarVariant.BROWN_NUGGET_POOTER or
-    familiarVar == FamiliarVariant.BONE_ORBITAL or
-    familiarVar == FamiliarVariant.LEPROSY or
-    familiarVar == FamiliarVariant.DEAD_CAT or
-    familiarVar == FamiliarVariant.DAMOCLES or
-    familiarVar == FamiliarVariant.ONE_UP then
-        return false
-    end
-    return true
-end
+mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedBerkano.UseFlippedBerkano, mod.flippedBerkanoID)
 
 --BERKANO?: returns a collectibleID given the familiar that it spawns
 function GetCollectibleFromFamiliar(familiar)

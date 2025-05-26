@@ -1,48 +1,46 @@
 local mod = FlippedRunes
-local Runes = {}
-
-FlippedAlgizID = Isaac.GetCardIdByName("Algiz?")
+local FlippedAlgiz = {}
 
 local flippedAlgizSfx = Isaac.GetSoundIdByName("flippedAlgiz")
 
 --Algiz? globals
-local tearsMult = 1.0
-local luckToAdd = 0.0
-local startTearsMult = 1.0
-local startLuckToAdd = 0.0
-local flippedAlgizPlayer
-local flippedAlgizCount = nil
-local flippedAlgizDuration = nil
-local flippedAlgizCountBackup = nil
+local g_tearsMult = 1.0
+local g_luckToAdd = 0.0
+local g_startTearsMult = 1.0
+local g_startLuckToAdd = 0.0
+local g_player
+local g_count = nil
+local g_duration = nil
+local g_count_GHG = nil
 
 --adds one broken heart and grants x2 tears and +10 luck that fades away over 40 seconds
 ---@param player EntityPlayer
-function Runes:UseFlippedAlgiz(_, player, _)
+function FlippedAlgiz:UseFlippedAlgiz(_, player, _)
 
     mod:PlayOverlay("flippedAlgiz.png", mod.OverlayColors, flippedAlgizSfx)
 
     player:AddBrokenHearts(1)
-    flippedAlgizPlayer = player
-    flippedAlgizCount = 0
-    flippedAlgizDuration = 1200.0
+    g_player = player
+    g_count = 0
+    g_duration = 1200.0
     
-    startTearsMult = 2.0
-    startLuckToAdd = 10.0
-    tearsMult = startTearsMult
-    luckToAdd = startLuckToAdd
+    g_startTearsMult = 2.0
+    g_startLuckToAdd = 10.0
+    g_tearsMult = g_startTearsMult
+    g_luckToAdd = g_startLuckToAdd
 end
 
-mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedAlgiz, FlippedAlgizID)
+mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedAlgiz.UseFlippedAlgiz, mod.flippedAlgizID)
 
 --ALGIZ?: adds tears specified to the player specified
 ---@param player EntityPlayer
-function Runes:AddTears(player, _)
+function FlippedAlgiz:AddTears(player, _)
     
     if player.MaxFireDelay == -1 then
         return
     end
     local onscreenTears = 30 / (player.MaxFireDelay + 1) --conversion from MaxFireDelay to tears stat
-    local newOnscreenTears = onscreenTears*tearsMult
+    local newOnscreenTears = onscreenTears*g_tearsMult
     if newOnscreenTears == 0 then
         return
     end
@@ -50,22 +48,22 @@ function Runes:AddTears(player, _)
     player.MaxFireDelay = newFireDelay
 end
 
-mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, Runes.AddTears, CacheFlag.CACHE_FIREDELAY)
+mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, FlippedAlgiz.AddTears, CacheFlag.CACHE_FIREDELAY)
 
 --ALGIZ?: adds luck specified to the player specified
 ---@param player EntityPlayer
-function Runes:AddLuck(player, _)
+function FlippedAlgiz:AddLuck(player, _)
 
-    player.Luck = player.Luck + luckToAdd
+    player.Luck = player.Luck + g_luckToAdd
 end
 
-mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, Runes.AddLuck, CacheFlag.CACHE_LUCK)
+mod:AddCallback(ModCallbacks.MC_EVALUATE_CACHE, FlippedAlgiz.AddLuck, CacheFlag.CACHE_LUCK)
 
-function Runes:TurnOffFlippedAlgizOnNewRun(isContinued)
+function FlippedAlgiz:TurnOffFlippedAlgizOnNewRun(isContinued)
     if isContinued == false then
-        flippedAlgizCount = flippedAlgizDuration
-        tearsMult = 1.0
-        luckToAdd = 0.0
+        g_count = g_duration
+        g_tearsMult = 1.0
+        g_luckToAdd = 0.0
 
         local numPlayers = Game():GetNumPlayers()
 
@@ -77,39 +75,39 @@ function Runes:TurnOffFlippedAlgizOnNewRun(isContinued)
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, Runes.TurnOffFlippedAlgizOnNewRun)
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, FlippedAlgiz.TurnOffFlippedAlgizOnNewRun)
 
-function Runes:FlippedAlgizOnUpdate()
+function FlippedAlgiz:FlippedAlgizOnUpdate()
 
     --if anything is nil we can't proceed
-    if flippedAlgizCount == nil or flippedAlgizDuration == nil or flippedAlgizPlayer == nil then
+    if g_count == nil or g_duration == nil or g_player == nil then
         return
     end
 
     --if count passes duration, we are done
-    if flippedAlgizCount > flippedAlgizDuration then
-        flippedAlgizCount = nil
-        flippedAlgizDuration = nil
-        flippedAlgizPlayer = nil
+    if g_count > g_duration then
+        g_count = nil
+        g_duration = nil
+        g_player = nil
         return
     end
 
     --only decrement once every second
-    if flippedAlgizCount % 30 == 0 then
-        FlippedAlgizAbility(flippedAlgizPlayer, flippedAlgizCount, flippedAlgizDuration)  
+    if g_count % 30 == 0 then
+        FlippedAlgizAbility(g_player, g_count, g_duration)  
     end
-    flippedAlgizCount = flippedAlgizCount + 1
+    g_count = g_count + 1
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_UPDATE, Runes.FlippedAlgizOnUpdate)
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, FlippedAlgiz.FlippedAlgizOnUpdate)
 
 function FlippedAlgizAbility(player, count, duration)
     
-    if duration == 0 or startTearsMult*duration == 0 then
+    if duration == 0 or g_startTearsMult*duration == 0 then
         return
     end
-    tearsMult = startTearsMult * (1 - count/(startTearsMult*duration))
-    luckToAdd = startLuckToAdd * (1 - count/duration)
+    g_tearsMult = g_startTearsMult * (1 - count/(g_startTearsMult*duration))
+    g_luckToAdd = g_startLuckToAdd * (1 - count/duration)
 
 
     player:AddCacheFlags(CacheFlag.CACHE_FIREDELAY)
@@ -118,17 +116,17 @@ function FlippedAlgizAbility(player, count, duration)
     player:EvaluateItems()
 end
 
-function Runes:OnChangeRoom()
-    flippedAlgizCountBackup = flippedAlgizCount
+function FlippedAlgiz:OnChangeRoom()
+    g_count_GHG = g_count
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.OnChangeRoom)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FlippedAlgiz.OnChangeRoom)
 
-function Runes:OnRewind()
-    if flippedAlgizCountBackup ~= nil then
-        local restoredCount = (flippedAlgizCountBackup // 30) * 30
-        flippedAlgizCount = restoredCount
+function FlippedAlgiz:OnRewind()
+    if g_count_GHG ~= nil then
+        local restoredCount = (g_count_GHG // 30) * 30
+        g_count = restoredCount
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, Runes.OnRewind, CollectibleType.COLLECTIBLE_GLOWING_HOUR_GLASS)
+mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, FlippedAlgiz.OnRewind, CollectibleType.COLLECTIBLE_GLOWING_HOUR_GLASS)

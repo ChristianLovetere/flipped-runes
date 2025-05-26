@@ -1,12 +1,8 @@
 local mod = FlippedRunes
-local Runes = {}
-
-FlippedBlankID = Isaac.GetCardIdByName("Blank Rune?")
-
-local flippedBlackSfx = Isaac.GetSoundIdByName("flippedBlack")
+local FlippedBlank = {}
 
 --turns all runes on the ground in the room into flipped variant
-function Runes:UseFlippedBlank()
+function FlippedBlank:UseFlippedBlank()
     local entities = Isaac.GetRoomEntities()
     for _, entity in ipairs(entities) do
         if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_TAROTCARD then
@@ -19,22 +15,22 @@ function Runes:UseFlippedBlank()
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBlank, FlippedBlankID)
+mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedBlank.UseFlippedBlank, mod.flippedBlankID)
 
 --BLANK RUNE?: return flipped rune id based on the id of the normal rune
 function GetFlippedIdFromNormal(subType)
 
     local subTypeToFlippedRuneIdMap = {
-        [Card.RUNE_HAGALAZ] = FlippedHagalazID,
-        [Card.RUNE_JERA] = FlippedJeraID,
-        [Card.RUNE_EHWAZ] = FlippedEhwazID,
-        [Card.RUNE_DAGAZ] = FlippedDagazID,
-        [Card.RUNE_ANSUZ] = FlippedAnsuzID,
-        [Card.RUNE_PERTHRO] = FlippedPerthroID,
-        [Card.RUNE_BERKANO] = FlippedBerkanoID,
-        [Card.RUNE_ALGIZ] = FlippedAlgizID,
-        [Card.RUNE_BLANK] = FlippedBlankID,
-        [Card.RUNE_BLACK] = FlippedBlackID
+        [Card.RUNE_HAGALAZ] = mod.flippedHagalazID,
+        [Card.RUNE_JERA] = mod.flippedJeraID,
+        [Card.RUNE_EHWAZ] = mod.flippedEhwazID,
+        [Card.RUNE_DAGAZ] = mod.flippedDagazID,
+        [Card.RUNE_ANSUZ] = mod.flippedAnsuzID,
+        [Card.RUNE_PERTHRO] = mod.flippedPerthroID,
+        [Card.RUNE_BERKANO] = mod.flippedBerkanoID,
+        [Card.RUNE_ALGIZ] = mod.flippedAlgizID,
+        [Card.RUNE_BLANK] = mod.flippedBlankID,
+        [Card.RUNE_BLACK] = mod.flippedBlackID
     }
     return subTypeToFlippedRuneIdMap[subType]
 end

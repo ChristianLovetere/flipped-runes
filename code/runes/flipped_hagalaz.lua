@@ -1,22 +1,21 @@
 local mod = FlippedRunes
-local Runes = {}
-
-FlippedHagalazID = Isaac.GetCardIdByName("Hagalaz?")
+local FlippedHagalaz = {}
 
 local flippedHagalazSfx = Isaac.GetSoundIdByName("flippedHagalaz")
 
 --Hagalaz? globals
-local floorColorPulseCounter = nil
-local floorColorPulseDuration = nil
-local floorColorPulseRo, floorColorPulseGo, floorColorPulseBo
+local g_floorColorPulseCounter = nil
+local g_floorColorPulseDuration = nil
+local g_floorColorPulseRo, g_floorColorPulseGo, g_floorColorPulseBo
 
-local roomIndicesWithPitsRemoved = {}
-local hagalazUsedThisFloor = false
-local hagalazUsedThisRoom = false
+local g_roomIndicesWithPitsRemoved = {}
+local g_hagalazUsedThisFloor = false
+local g_hagalazUsedThisRoom = false
 
-function Runes:UseFlippedHagalaz()
+function FlippedHagalaz:UseFlippedHagalaz()
     
     mod:PlayOverlay("flippedHagalaz.png", mod.OverlayColors, flippedHagalazSfx)
+
     local pitLocations = {}
     local level = Game():GetLevel()
     local room = Game():GetRoom()
@@ -34,54 +33,54 @@ function Runes:UseFlippedHagalaz()
         return
     end
 
-    hagalazUsedThisRoom = true
-    hagalazUsedThisFloor = true
-    roomIndicesWithPitsRemoved[level:GetCurrentRoomDesc().GridIndex] = pitLocations
+    g_hagalazUsedThisRoom = true
+    g_hagalazUsedThisFloor = true
+    g_roomIndicesWithPitsRemoved[level:GetCurrentRoomDesc().GridIndex] = pitLocations
     InitFloorColorPulse(0.355/2,.601/2,.554/2, 60.0)
 end
 
-mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedHagalaz, FlippedHagalazID)
+mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedHagalaz.UseFlippedHagalaz, mod.flippedHagalazID)
 
 function InitFloorColorPulse(ro, go, bo, duration)
     
-    floorColorPulseCounter = 0.0
-    floorColorPulseDuration = duration
-    floorColorPulseRo = ro
-    floorColorPulseGo = go
-    floorColorPulseBo = bo
+    g_floorColorPulseCounter = 0.0
+    g_floorColorPulseDuration = duration
+    g_floorColorPulseRo = ro
+    g_floorColorPulseGo = go
+    g_floorColorPulseBo = bo
 end
 
 --HAGALAZ?: sets the floor color and then gradually reduces it back to normal
 function FloorColorPulse()
     
-    if floorColorPulseCounter == 0.0 then
-        Game():GetRoom():SetFloorColor(Color(1, 1, 1, 1, floorColorPulseRo, floorColorPulseGo, floorColorPulseBo))
-    elseif floorColorPulseDuration == 0 then
-        floorColorPulseCounter = floorColorPulseCounter + 1.0
+    if g_floorColorPulseCounter == 0.0 then
+        Game():GetRoom():SetFloorColor(Color(1, 1, 1, 1, g_floorColorPulseRo, g_floorColorPulseGo, g_floorColorPulseBo))
+    elseif g_floorColorPulseDuration == 0 then
+        g_floorColorPulseCounter = g_floorColorPulseCounter + 1.0
         return
     else
-        local progress = floorColorPulseCounter / floorColorPulseDuration
-        local partialRo = floorColorPulseRo * (1 - progress)
-        local partialGo = floorColorPulseGo * (1 - progress)
-        local partialBo = floorColorPulseBo * (1 - progress)
+        local progress = g_floorColorPulseCounter / g_floorColorPulseDuration
+        local partialRo = g_floorColorPulseRo * (1 - progress)
+        local partialGo = g_floorColorPulseGo * (1 - progress)
+        local partialBo = g_floorColorPulseBo * (1 - progress)
 
         Game():GetRoom():SetFloorColor(Color(1,1,1,1,partialRo,partialGo,partialBo))
     end   
-    floorColorPulseCounter = floorColorPulseCounter + 1.0
+    g_floorColorPulseCounter = g_floorColorPulseCounter + 1.0
 end
 
 function ColorPulseOnUpdate()
     
-    if floorColorPulseCounter == nil or floorColorPulseDuration == nil then
+    if g_floorColorPulseCounter == nil or g_floorColorPulseDuration == nil then
         return
     end
     --reset back to nil when done
-    if floorColorPulseCounter > floorColorPulseDuration then
-        floorColorPulseCounter = nil
-        floorColorPulseDuration = nil
-        floorColorPulseRo = nil
-        floorColorPulseGo = nil
-        floorColorPulseBo = nil
+    if g_floorColorPulseCounter > g_floorColorPulseDuration then
+        g_floorColorPulseCounter = nil
+        g_floorColorPulseDuration = nil
+        g_floorColorPulseRo = nil
+        g_floorColorPulseGo = nil
+        g_floorColorPulseBo = nil
     else
         FloorColorPulse()
     end
@@ -89,27 +88,27 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_UPDATE, ColorPulseOnUpdate)
 
-function Runes:ColorPulseCancelOnChangeRoom()
-    if floorColorPulseCounter == nil or floorColorPulseDuration == nil then
+function FlippedHagalaz:ColorPulseCancelOnChangeRoom()
+    if g_floorColorPulseCounter == nil or g_floorColorPulseDuration == nil then
         return
     end
-    floorColorPulseCounter = nil
-    floorColorPulseDuration = nil
-    floorColorPulseRo = nil
-    floorColorPulseGo = nil
-    floorColorPulseBo = nil
+    g_floorColorPulseCounter = nil
+    g_floorColorPulseDuration = nil
+    g_floorColorPulseRo = nil
+    g_floorColorPulseGo = nil
+    g_floorColorPulseBo = nil
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.ColorPulseCancelOnChangeRoom)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FlippedHagalaz.ColorPulseCancelOnChangeRoom)
 
 --HAGALAZ?: discretely removes pits after walking into a room where Hagalaz? was used previously
-function Runes:DiscretelyRemovePits()
+function FlippedHagalaz:DiscretelyRemovePits()
 
-    if hagalazUsedThisFloor ~= true then
+    if g_hagalazUsedThisFloor ~= true then
         return
     end
 
-    local pitLocations = roomIndicesWithPitsRemoved[Game():GetLevel():GetCurrentRoomDesc().GridIndex]
+    local pitLocations = g_roomIndicesWithPitsRemoved[Game():GetLevel():GetCurrentRoomDesc().GridIndex]
 
     if pitLocations ~= nil then
         local room = Game():GetRoom()
@@ -123,40 +122,40 @@ function Runes:DiscretelyRemovePits()
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.DiscretelyRemovePits)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FlippedHagalaz.DiscretelyRemovePits)
 
-function Runes:ResetUsedThisRoom()
-    hagalazUsedThisRoom = false
+function FlippedHagalaz:ResetUsedThisRoom()
+    g_hagalazUsedThisRoom = false
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.ResetUsedThisRoom)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FlippedHagalaz.ResetUsedThisRoom)
 
-function Runes:OnRewind()
-    if hagalazUsedThisRoom then
+function FlippedHagalaz:OnRewind()
+    if g_hagalazUsedThisRoom then
         local roomIndex = Game():GetLevel():GetCurrentRoomDesc().GridIndex
-        if roomIndicesWithPitsRemoved[roomIndex] ~= nil then
-            roomIndicesWithPitsRemoved[roomIndex] = nil
+        if g_roomIndicesWithPitsRemoved[roomIndex] ~= nil then
+            g_roomIndicesWithPitsRemoved[roomIndex] = nil
         end
-        hagalazUsedThisRoom = false
+        g_hagalazUsedThisRoom = false
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, Runes.OnRewind, CollectibleType.COLLECTIBLE_GLOWING_HOUR_GLASS)
+mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, FlippedHagalaz.OnRewind, CollectibleType.COLLECTIBLE_GLOWING_HOUR_GLASS)
 
 --HAGALAZ?: Reset vars related to Hagalaz? ability
-function Runes:ResetHagalaz(isContinued)
+function FlippedHagalaz:ResetHagalaz(isContinued)
     isContinued = isContinued or false
     if isContinued == false then
-        hagalazUsedThisFloor = false
-    roomIndicesWithPitsRemoved = {}
+        g_hagalazUsedThisFloor = false
+    g_roomIndicesWithPitsRemoved = {}
     
-    floorColorPulseRo = nil
-    floorColorPulseGo = nil
-    floorColorPulseBo = nil
-    floorColorPulseCounter = nil
-    floorColorPulseDuration = nil
+    g_floorColorPulseRo = nil
+    g_floorColorPulseGo = nil
+    g_floorColorPulseBo = nil
+    g_floorColorPulseCounter = nil
+    g_floorColorPulseDuration = nil
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, Runes.ResetHagalaz)
-mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, Runes.ResetHagalaz)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, FlippedHagalaz.ResetHagalaz)
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, FlippedHagalaz.ResetHagalaz)

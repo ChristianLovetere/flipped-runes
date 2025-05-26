@@ -26,7 +26,11 @@ function mod:PlayOverlay(sprite, colors, sound)
     overlay:ReplaceSpritesheet(0, "gfx/ui/giantbook/" .. sprite)
     overlay:LoadGraphics()
     overlay:Play("Appear")
-    SFXManager():Play(sound)
+    
+    if sound ~= nil then
+        SFXManager():Play(sound)
+    end
+    
     currentFrame = 0
 end
 

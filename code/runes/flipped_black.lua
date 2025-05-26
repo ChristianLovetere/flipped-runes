@@ -1,15 +1,14 @@
 local mod = FlippedRunes
-local Runes = {}
+local FlippedBlack = {}
 
-FlippedBlackID = Isaac.GetCardIdByName("Black Rune?")
-CrackedFlippedBlackID = Isaac.GetCardIdByName("Black Rune..?")
-BrokenFlippedBlackID = Isaac.GetCardIdByName("Black Rune...")
-ShiningFlippedBlackID = Isaac.GetCardIdByName("Black Rune!?")
+local flippedBlackSfx = Isaac.GetSoundIdByName("flippedBlack")
+
+local sfx = SFXManager()
 
 --Black Rune? globals
-local numRecycles = -1
+local g_numRecycles = -1
 
-function Runes:UseFlippedBlack(_, player, _)
+function FlippedBlack:UseFlippedBlack(_, player, _)
 
     local spawnablePickups = {
         {PickupVariant.PICKUP_COIN, 0},
@@ -19,12 +18,12 @@ function Runes:UseFlippedBlack(_, player, _)
     }
     
     SpawnPickups(player.Position, math.random(2,3), 2, spawnablePickups)
-    DegradeFlippedBlackRune(player, FlippedBlackID, CrackedFlippedBlackID)
+    DegradeFlippedBlackRune(player, mod.flippedBlackID, mod.crackedFlippedBlackID)
 end
 
-mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseFlippedBlack, FlippedBlackID)
+mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedBlack.UseFlippedBlack, mod.flippedBlackID)
 
-function Runes:UseCrackedFlippedBlack(_, player, _)
+function FlippedBlack:UseCrackedFlippedBlack(_, player, _)
 
     local spawnablePickups = {
         {PickupVariant.PICKUP_TAROTCARD, 0},
@@ -33,12 +32,12 @@ function Runes:UseCrackedFlippedBlack(_, player, _)
     }
     
     SpawnPickups(player.Position, math.random(1,3), 3, spawnablePickups)
-    DegradeFlippedBlackRune(player, CrackedFlippedBlackID, BrokenFlippedBlackID)
+    DegradeFlippedBlackRune(player, mod.crackedFlippedBlackID, mod.brokenFlippedBlackID)
 end
 
-mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseCrackedFlippedBlack, CrackedFlippedBlackID)
+mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedBlack.UseCrackedFlippedBlack, mod.crackedFlippedBlackID)
 
-function Runes:UseBrokenFlippedBlack(_, player, _)
+function FlippedBlack:UseBrokenFlippedBlack(_, player, _)
 
     local spawnablePickups = {
         {PickupVariant.PICKUP_HEART, 0},
@@ -47,12 +46,12 @@ function Runes:UseBrokenFlippedBlack(_, player, _)
     }
 
     SpawnPickups(player.Position, math.random(1,2), 3, spawnablePickups)
-    DegradeFlippedBlackRune(player, BrokenFlippedBlackID, ShiningFlippedBlackID)
+    DegradeFlippedBlackRune(player, mod.brokenFlippedBlackID, mod.shiningFlippedBlackID)
 end
 
-mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseBrokenFlippedBlack, BrokenFlippedBlackID)
+mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedBlack.UseBrokenFlippedBlack, mod.brokenFlippedBlackID)
 
-function Runes:UseShiningFlippedBlack(_, player, _)
+function FlippedBlack:UseShiningFlippedBlack(_, player, _)
 
     local spawnablePickups = {
         {PickupVariant.PICKUP_TRINKET, 0},
@@ -72,14 +71,14 @@ function Runes:UseShiningFlippedBlack(_, player, _)
             end
         end
 
-        local sfx = SFXManager()
-
-        player:AddCard(ShiningFlippedBlackID)
+        player:AddCard(mod.shiningFlippedBlackID)
         SpawnRockBreakEffect(player.Position, 6, 1)
         sfx:Play(SoundEffect.SOUND_ROCK_CRUMBLE)
         SpawnGlowEffect(player.Position)
         Game():ShakeScreen(7)
     else
+
+        mod:DelayFunc(60, FlippedBlack.PlayVoiceover)
 
         for _, entity in ipairs(Isaac.GetRoomEntities()) do
             if entity and FlippedRunes:IsMonster(entity) then
@@ -98,29 +97,31 @@ function Runes:UseShiningFlippedBlack(_, player, _)
         Game():ShakeScreen(20)
         SpawnRedPoofEffect(player.Position)
 
-        local sfx = SFXManager()
         sfx:Play(SoundEffect.SOUND_EXPLOSION_STRONG, 2)
         sfx:Play(SoundEffect.SOUND_PORTAL_OPEN, 2)        
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_USE_CARD, Runes.UseShiningFlippedBlack, ShiningFlippedBlackID)
+mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedBlack.UseShiningFlippedBlack, mod.shiningFlippedBlackID)
+
+--Black RUNE?: Delayable func for playing voiceover
+function FlippedBlack:PlayVoiceover()
+    SFXManager():Play(flippedBlackSfx, 2)
+end
 
 --BLACK RUNE?: generic function for first 3 black rune variants
 function DegradeFlippedBlackRune(player, currentRuneID, nextRuneID)
 
-    if numRecycles == -1 then
-        numRecycles = math.random(2)
+    if g_numRecycles == -1 then
+        g_numRecycles = math.random(2)
     end
-    if numRecycles > 0 then
+    if g_numRecycles > 0 then
         player:AddCard(currentRuneID)
-        numRecycles = numRecycles - 1
+        g_numRecycles = g_numRecycles - 1
     else
         player:AddCard(nextRuneID)
-        numRecycles = -1
+        g_numRecycles = -1
     end
-
-    local sfx = SFXManager()
 
     Game():ShakeScreen(7)
     sfx:Play(SoundEffect.SOUND_ROCK_CRUMBLE)
@@ -145,11 +146,11 @@ function DoBombRing(player, bombVariant, numBombs, speed, spawnRadius, angleOffs
 end
 
 --BLACK RUNE?: prevent cracked, broken, and shining Black Rune?s from spawning naturally
-function Runes:DeleteCrackedBlackRunes()
+function FlippedBlack:DeleteCrackedBlackRunes()
     for _, entity in ipairs(Isaac.GetRoomEntities()) do
         if entity:ToPickup() and entity:ToPickup().Variant == PickupVariant.PICKUP_TAROTCARD then
             local pickup = entity:ToPickup()
-            if pickup and (pickup.SubType == CrackedFlippedBlackID or pickup.SubType == BrokenFlippedBlackID or pickup.SubType == ShiningFlippedBlackID) then
+            if pickup and (pickup.SubType == mod.crackedFlippedBlackID or pickup.SubType == mod.brokenFlippedBlackID or pickup.SubType == mod.shiningFlippedBlackID) then
                 pickup:Remove()
                 Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.BOMB_CRATER, pickup.Position, Vector(0,0), nil, 0, mod:SafeRandom())
             end
@@ -157,27 +158,27 @@ function Runes:DeleteCrackedBlackRunes()
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, Runes.DeleteCrackedBlackRunes)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FlippedBlack.DeleteCrackedBlackRunes)
 
 --BLACK RUNE?: when one of the unstable black runes spawn, reroll them into another flipped rune
-function Runes:RerollCrackedBlackRunes(_, card, _, _)
-    if card == CrackedFlippedBlackID or card == BrokenFlippedBlackID or card == ShiningFlippedBlackID then
+function FlippedBlack:RerollCrackedBlackRunes(_, card, _, _)
+    if card == mod.crackedFlippedBlackID or card == mod.brokenFlippedBlackID or card == mod.shiningFlippedBlackID then
         return GetRandomFlippedRune()
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_GET_CARD, Runes.RerollCrackedBlackRunes)
+mod:AddCallback(ModCallbacks.MC_GET_CARD, FlippedBlack.RerollCrackedBlackRunes)
 
 --BLACK RUNE?: calls SelfDestructCrackedBlackRunes with a delay so the rune appears to explode when it hits the ground
-function Runes:DelaySelfDestructCrackedBlackRunes(pickup)
+function FlippedBlack:DelaySelfDestructCrackedBlackRunes(pickup)
     FlippedRunes:DelayFunc(25, SelfDestructCrackedBlackRunes, pickup)
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_PICKUP_INIT, Runes.DelaySelfDestructCrackedBlackRunes)
+mod:AddCallback(ModCallbacks.MC_POST_PICKUP_INIT, FlippedBlack.DelaySelfDestructCrackedBlackRunes)
 
 --BLACK RUNE?: explodes and destroys cracked, broken, and shining Black Rune?s on being dropped on the ground
 function SelfDestructCrackedBlackRunes(pickup)
-    if pickup and (pickup.SubType == CrackedFlippedBlackID or pickup.SubType == BrokenFlippedBlackID or pickup.SubType == ShiningFlippedBlackID) then
+    if pickup and pickup.Variant == PickupVariant.PICKUP_TAROTCARD and (pickup.SubType == mod.crackedFlippedBlackID or pickup.SubType == mod.brokenFlippedBlackID or pickup.SubType == mod.shiningFlippedBlackID) then
         Isaac.Explode(pickup.Position, pickup, 0)
         pickup:Remove()
         SpawnRockBreakEffect(pickup.Position, 30, 2)
@@ -222,41 +223,40 @@ end
 
 --BLACK RUNE?: Prevent black runes from being mimicked by Clear Rune
 ---@param player EntityPlayer
-function Runes:DontMimic(_, _, player)
+function FlippedBlack:DontMimic(_, _, player)
 
-    local sfx = SFXManager()
-    if player:GetCard(0) == FlippedBlackID or player:GetCard(0) == CrackedFlippedBlackID or
-    player:GetCard(0) == BrokenFlippedBlackID or player:GetCard(0) == ShiningFlippedBlackID then
+    if player:GetCard(0) == mod.flippedBlackID or player:GetCard(0) == mod.crackedFlippedBlackID or
+    player:GetCard(0) == mod.brokenFlippedBlackID or player:GetCard(0) == mod.shiningFlippedBlackID then
         sfx:Play(SoundEffect.SOUND_THUMBS_DOWN)
         return true
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, Runes.DontMimic, CollectibleType.COLLECTIBLE_CLEAR_RUNE)
+mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, FlippedBlack.DontMimic, CollectibleType.COLLECTIBLE_CLEAR_RUNE)
 
 --BLACK RUNE?: resets globals
-function Runes:FlippedBlackResetGlobals(isContinued)
+function FlippedBlack:FlippedBlackResetGlobals(isContinued)
     isContinued = isContinued or false
     if isContinued == false then
-        numRecycles = -1
+        g_numRecycles = -1
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, Runes.FlippedBlackResetGlobals)
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, FlippedBlack.FlippedBlackResetGlobals)
 
 --BlACK RUNE?: returns a random flipped rune
 function GetRandomFlippedRune()
     local flippedRunes = {
-        FlippedHagalazID,
-        FlippedJeraID,
-        FlippedEhwazID,
-        FlippedDagazID,
-        FlippedAnsuzID,
-        FlippedPerthroID,
-        FlippedBerkanoID,
-        FlippedAlgizID,
-        FlippedBlankID,
-        FlippedBlackID,
+        mod.flippedHagalazID,
+        mod.flippedJeraID,
+        mod.flippedEhwazID,
+        mod.flippedDagazID,
+        mod.flippedAnsuzID,
+        mod.flippedPerthroID,
+        mod.flippedBerkanoID,
+        mod.flippedAlgizID,
+        mod.flippedBlankID,
+        mod.flippedBlackID,
     }
     return flippedRunes[math.random(10)]
 end
