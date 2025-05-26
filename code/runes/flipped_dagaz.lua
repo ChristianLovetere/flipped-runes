@@ -16,6 +16,11 @@ local g_curses = {
 local g_activeCurses
 local g_floorStartCurses = 0
 
+--flag for an EID callback
+if EID then
+    mod.DagazEidFlag = false
+end
+
 --adds a random curse and a chance to add status effects to enemies when walking into rooms 
 --for the current floor. The chance for a status effect increases with amount of curses
 function FlippedDagaz:UseFlippedDagaz(_, player, _)
@@ -29,6 +34,11 @@ function FlippedDagaz:UseFlippedDagaz(_, player, _)
         level:AddCurse(newCurse, true)
         Game():ShakeScreen(10)
         g_active = true
+
+        if EID then
+            mod.DagazEidFlag = true
+        end
+
         g_player = player
         _, g_activeCurses = FlippedDagazCursesPresent() 
     end
@@ -103,6 +113,9 @@ function FlippedDagaz:FlippedDagazResetGlobals(isContinued)
     if isContinued == false then
         g_floorStartCurses = GetNumActiveCurses()
         g_active = false
+        if EID then
+            mod.DagazEidFlag = false
+        end
         g_player = nil
     end
 end
@@ -152,6 +165,9 @@ function FlippedDagaz:GetSoulHeartsToAddOnUseDagaz(_, player, _)
     player:AddSoulHearts(g_activeCurses - g_floorStartCurses)
 
     g_active = false
+    if EID then
+        mod.DagazEidFlag = false
+    end
     g_activeCurses = 0
 end
 
