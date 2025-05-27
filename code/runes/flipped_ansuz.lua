@@ -11,10 +11,24 @@ local g_previousCurses = 0
 local g_damageTakenThisFloor = false
 local g_damageTakenThisFloor_GHG = false
 local g_bossRoom
-local g_bossRoomBackup
 local g_inBossRoom = false
-local g_inBossRoomDagazDrop = false
-local g_dagazDropQueued = false
+local g_dagazSpawnAttempted = false
+local g_dagazSpawnAttempted_GHG = false
+local g_rewindingOutOfBossRoom = false
+local g_dagazSpawnQueued = false
+local g_dagazDontQueue = false
+
+local g_indicator
+local g_indicatorPlayer
+local g_indicatorMaxFrame = 0
+local g_currentAnim
+
+---@enum ansuzAnim
+local ansuzAnim = {
+    ACTIVE = 1,
+    LOST = 2,
+    SUCCESS = 3
+}
 
 --Adds curse of the lost to the floor. If you manage to get rid of it, reveals and opens the usr
 --beating the entire floor without any non-self damage will make the boss drop a Dagaz rune
@@ -25,8 +39,7 @@ function FlippedAnsuz:UseFlippedAnsuz(_, player, _)
     mod:PlayOverlay("flippedAnsuz.png", mod.OverlayColors, flippedAnsuzSfx)
 
     g_bossRoom = GetCorrectBossRoom()
-    g_bossRoomBackup = g_bossRoom
-    print(g_bossRoom)
+
     local level = Game():GetLevel()
     if player:HasCollectible(CollectibleType.COLLECTIBLE_BLACK_CANDLE) then
         Isaac.RunCallback("POST_REMOVE_CURSE_OF_LOST")
@@ -35,6 +48,21 @@ function FlippedAnsuz:UseFlippedAnsuz(_, player, _)
         Game():ShakeScreen(7)
         g_active = true
     end
+
+    --Anim stuff
+    g_indicatorPlayer = player
+    g_indicator = Sprite()
+    g_indicator:Load("gfx/flippedAnsuzIndicator.anm2", true)
+    if not g_damageTakenThisFloor then
+        g_indicator:Play("Active")
+        g_currentAnim = ansuzAnim.ACTIVE
+        g_indicatorMaxFrame = 11
+    else
+        g_indicator:Play("Lost")
+        g_currentAnim = ansuzAnim.LOST
+        SFXManager():Play(SoundEffect.SOUND_THUMBS_DOWN)
+    end
+    
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedAnsuz.UseFlippedAnsuz, mod.flippedAnsuzID)
@@ -171,7 +199,7 @@ function IsWithinBounds(row, col)
 end
 
 --ANSUZ?: fires off the POST_REMOVE_CURSE_OF_LOST callback if the curse of the lost was recently removed
-function FlippedAnsuz:FlippedAnsuzDetectCurseChange()
+function FlippedAnsuz:DetectCurseChange()
     
     if g_active then
         if g_counter == g_duration then
@@ -186,13 +214,19 @@ function FlippedAnsuz:FlippedAnsuzDetectCurseChange()
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_UPDATE, FlippedAnsuz.FlippedAnsuzDetectCurseChange)
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, FlippedAnsuz.DetectCurseChange)
 
 --ANSUZ?: Turn global to true when any damage is taken this floor
 function FlippedAnsuz:DetectPlayerDamageTakenThisFloor(_, _, damageFlag)
     --if not self damage
     if damageFlag & DamageFlag.DAMAGE_NO_PENALTIES == 0 then
         g_damageTakenThisFloor = true
+        if g_indicator then
+            g_indicator:Play("Lost", true)
+            g_currentAnim = ansuzAnim.LOST
+            SFXManager():Play(SoundEffect.SOUND_THUMBS_DOWN)
+        end
+        
     end
 end
 
@@ -269,73 +303,145 @@ function GetCorrectBossRoom()
     end
 end
 
-function FlippedAnsuz:FlippedAnsuzEnableDagazDrop()
+function FlippedAnsuz:BossRoomCheck()
     if Game():GetLevel():GetCurrentRoomDesc().SafeGridIndex == g_bossRoom then
         g_inBossRoom = true
-        g_inBossRoomDagazDrop = true
     else
         g_inBossRoom = false
-        g_inBossRoomDagazDrop = false
-    end
-
-    if g_dagazDropQueued then
-        SpawnDagazCenterRoom(Game():GetRoom())
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FlippedAnsuz.FlippedAnsuzEnableDagazDrop)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FlippedAnsuz.BossRoomCheck)
 
-function FlippedAnsuz:FlippedAnsuzDropDagaz()
+function FlippedAnsuz:DropDagaz()
 
     if g_inBossRoom then
-        if Game():GetLevel():GetCurrentRoomDesc().Clear then
-            if not g_damageTakenThisFloor then
+        if Game():GetLevel():GetCurrentRoomDesc().Clear and not g_dagazSpawnAttempted and not g_damageTakenThisFloor then
 
-                local room = Game():GetRoom()
-                Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.REVERSE_EXPLOSION, room:GetCenterPos(), Vector(0,0), nil, 0, mod:SafeRandom())
-                FlippedRunes:DelayFunc(33, SpawnDagazCenterRoom, room)
+            FlippedAnsuz:SpawnChallengeDagaz()
+            g_dagazSpawnAttempted = true
+
+            --Anim stuff
+            if g_indicator then
+                g_indicator:Play("Success", true)
+                g_currentAnim = ansuzAnim.SUCCESS
+                SFXManager():Play(SoundEffect.SOUND_THUMBSUP)
             end
-
-            g_inBossRoom = false
-            g_bossRoom = nil
         end
     end
+    print("0000000000000000000000000000000000")
+    print("g_dagazSpawnAttempted: " .. tostring(g_dagazSpawnAttempted))
+    print("g_dagazSpawnAttempted_GHG: " .. tostring(g_dagazSpawnAttempted_GHG))
+    print("g_rewindingOutOfBossRoom: " .. tostring(g_rewindingOutOfBossRoom))
+    print("g_dagazSpawnQueued: " .. tostring(g_dagazSpawnQueued))
+    print("g_dagazDontQueue: " .. tostring(g_dagazDontQueue))
+    
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_UPDATE, FlippedAnsuz.FlippedAnsuzDropDagaz)
-
-function SpawnDagazCenterRoom(room)
-    if g_inBossRoomDagazDrop or g_dagazDropQueued then
-        Game():Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, room:GetCenterPos(), Vector(0,0), nil, Card.RUNE_DAGAZ, mod:SafeRandom())
-        g_dagazDropQueued = false
-    else
-        g_dagazDropQueued = true
-    end
-end
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, FlippedAnsuz.DropDagaz)
 
 function FlippedAnsuz:OnRewind()
-    g_bossRoom = g_bossRoomBackup
     g_damageTakenThisFloor = g_damageTakenThisFloor_GHG
+    g_dagazSpawnAttempted = g_dagazSpawnAttempted_GHG
+
+    if g_inBossRoom then
+        g_rewindingOutOfBossRoom = true
+        g_inBossRoom = false
+    else
+        g_rewindingOutOfBossRoom = false
+    end
 end
 
 mod:AddCallback(ModCallbacks.MC_PRE_USE_ITEM, FlippedAnsuz.OnRewind, CollectibleType.COLLECTIBLE_GLOWING_HOUR_GLASS)
 
 function FlippedAnsuz:OnChangeRoom()
     g_damageTakenThisFloor_GHG = g_damageTakenThisFloor
+    if not g_rewindingOutOfBossRoom then
+        g_dagazSpawnAttempted_GHG = g_dagazSpawnAttempted
+        g_dagazDontQueue = false
+    end
+
+    if g_rewindingOutOfBossRoom then
+        g_dagazDontQueue = true
+    end
+    if g_inBossRoom and g_dagazSpawnQueued and not g_dagazDontQueue then
+        SpawnDagazCenterRoom(Game():GetRoom())
+    end
 end
 
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FlippedAnsuz.OnChangeRoom)
 
-function FlippedAnsuz:FlippedAnsuzResetGlobals(isContinued)
-    isContinued = isContinued or false
-    if isContinued == false then
-        g_previousCurses = 0
-        g_active = false
-        g_damageTakenThisFloor = false
-        g_inBossRoom = false
-        g_bossRoom = nil
+function FlippedAnsuz:SpawnChallengeDagaz()
+    local room = Game():GetRoom()
+    Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.REVERSE_EXPLOSION, room:GetCenterPos(), Vector(0,0), nil, 0, mod:SafeRandom())
+    FlippedRunes:DelayFunc(33, SpawnDagazCenterRoom, room)
+end
+
+function SpawnDagazCenterRoom(room)
+    if g_inBossRoom then
+        Game():Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_TAROTCARD, room:GetCenterPos(), Vector(0,0), nil, Card.RUNE_DAGAZ, mod:SafeRandom())
+        g_dagazSpawnQueued = false
+    else
+        g_dagazSpawnQueued = true
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, FlippedAnsuz.FlippedAnsuzResetGlobals)
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, FlippedAnsuz.FlippedAnsuzResetGlobals)
+function FlippedAnsuz:ResetGlobals(isContinued)
+    isContinued = isContinued or false
+    if isContinued == false then
+
+        g_previousCurses = 0
+        g_active = false
+
+        g_damageTakenThisFloor = false
+        g_inBossRoom = false
+        g_bossRoom = nil
+        g_dagazSpawnAttempted = false
+        g_rewindingOutOfBossRoom = false
+        g_dagazDontQueue = false
+
+        g_indicator = nil
+        g_indicatorPlayer = nil
+        g_currentAnim = 0
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, FlippedAnsuz.ResetGlobals)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, FlippedAnsuz.ResetGlobals)
+
+function FlippedAnsuz:OnRender()
+
+    if g_indicatorPlayer then
+        
+        if g_currentAnim == ansuzAnim.ACTIVE then
+            if Isaac.GetFrameCount() % 4 == 0 then
+            
+                if g_indicator:GetFrame() == g_indicatorMaxFrame then
+                    g_indicator:SetFrame(0)
+                end
+                g_indicator:Update()
+            end
+        elseif g_currentAnim == ansuzAnim.LOST then
+            if Isaac.GetFrameCount() % 4 == 0 then
+            
+                g_indicator:Update()
+            end
+        elseif g_currentAnim == ansuzAnim.SUCCESS then
+            if Isaac.GetFrameCount() % 4 == 0 then
+            
+                g_indicator:Update()
+            end
+        end
+        local playerPos = Isaac.WorldToScreen(g_indicatorPlayer.Position)
+        local abovePlayerHead = playerPos + Vector(0, -45)
+        g_indicator:Render(abovePlayerHead)
+        if g_indicator:IsFinished() then
+            g_indicator = nil
+            g_indicatorPlayer = nil
+            g_currentAnim = 0
+            g_indicatorMaxFrame = 0
+        end
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_RENDER, FlippedAnsuz.OnRender)
