@@ -35,8 +35,8 @@ mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedJera.UseFlippedJera, mod.flippe
 --JERA?: get a weighted random improved coin type
 function GetRefinedCoin()
     local coinWeights = {
-        {50, CoinSubType.COIN_PENNY},           --50%
-        {70, CoinSubType.COIN_DOUBLEPACK},      --20%
+        {10, CoinSubType.COIN_PENNY},           --10%
+        {70, CoinSubType.COIN_DOUBLEPACK},      --60%
         {80, CoinSubType.COIN_NICKEL},          --10%
         {87, CoinSubType.COIN_DIME},            --7%
         {92, CoinSubType.COIN_STICKYNICKEL},    --5%
@@ -58,12 +58,10 @@ end
 function GetRefinedBomb()
 
     local bombWeights = {
-        {42, BombSubType.BOMB_NORMAL},      --42%
-        {84, BombSubType.BOMB_DOUBLEPACK},  --42%
-        {89, BombSubType.BOMB_TROLL},       --5%
-        {94, BombSubType.BOMB_SUPERTROLL},  --5%
-        {97, BombSubType.BOMB_GOLDEN},      --3%
-        {100, BombSubType.BOMB_GIGA}        --3%
+        {15, BombSubType.BOMB_NORMAL},      --15%
+        {90, BombSubType.BOMB_DOUBLEPACK},  --75%
+        {95, BombSubType.BOMB_GOLDEN},      --5%
+        {100, BombSubType.BOMB_GIGA}        --5%
     }
 
     local replacementBomb = math.random(100)
@@ -81,14 +79,11 @@ end
 function GetRefinedHeart()
 
     local heartWeights = {
-        {14, HeartSubType.HEART_HALF},          --14%
-        {28, HeartSubType.HEART_FULL},          --14%
-        {42, HeartSubType.HEART_DOUBLEPACK},    --14%
-        {56, HeartSubType.HEART_SCARED},        --14%
-        {63, HeartSubType.HEART_HALF_SOUL},     --7%
-        {70, HeartSubType.HEART_SOUL},          --7%
-        {77, HeartSubType.HEART_BLACK},         --7%
-        {84, HeartSubType.HEART_BLENDED},       --7%
+        {52, HeartSubType.HEART_DOUBLEPACK},    --52%
+        {60, HeartSubType.HEART_HALF_SOUL},     --8%
+        {68, HeartSubType.HEART_SOUL},          --8%
+        {76, HeartSubType.HEART_BLACK},         --8%
+        {84, HeartSubType.HEART_BLENDED},       --8%
         {88, HeartSubType.HEART_GOLDEN},        --4%
         {92, HeartSubType.HEART_BONE},          --4%
         {96, HeartSubType.HEART_ETERNAL},       --4%
@@ -110,8 +105,8 @@ end
 function GetRefinedKey()
 
     local keyWeights = {
-        {40, KeySubType.KEY_NORMAL},        --40%
-        {85, KeySubType.KEY_DOUBLEPACK},    --45%
+        {20, KeySubType.KEY_NORMAL},        --20%
+        {85, KeySubType.KEY_DOUBLEPACK},    --65%
         {95, KeySubType.KEY_CHARGED},       --10%
         {100, KeySubType.KEY_GOLDEN},       --5%
     }

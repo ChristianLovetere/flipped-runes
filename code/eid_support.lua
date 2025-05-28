@@ -99,4 +99,34 @@ if EID then
     end
 
     EID:addDescriptionModifier("DagazDagaz?", DagazModifierCondition, DagazModifierCallback)
+
+    local ansuzDescChosen = false
+
+    --Ansuz? cond
+    local function FlippedAnsuzModifierCondition(descObj)
+        if not ansuzDescChosen then
+            if descObj.ObjType == EntityType.ENTITY_PICKUP and descObj.ObjVariant == PickupVariant.PICKUP_TAROTCARD and descObj.ObjSubType == mod.flippedAnsuzID then
+                return true
+            end
+        end 
+    end
+
+    --Ansuz? callb
+    local function FlippedAnsuzModifierCallback(descObj)
+        if Game():IsGreedMode() then
+            EID:addCard(mod.flippedAnsuzID, "#{{Shop}} In {{ColorYellow}}Greed Mode{{CR}}, spawns the {{Collectible76}} X-Ray Vision item", "Ansuz?", "en_us")
+        else
+            EID:addCard(mod.flippedAnsuzID, "{{CurseLostSmall}} Adds {{ColorPurple}}Curse of the Lost{{CR}} to the current floor#{{Card35}} A {{ColorTransform}}Dagaz{{CR}} rune will drop after the boss is killed if no hits were taken this floor#{{UltraSecretRoom}} If the floor's {{ColorPurple}}Curse of the Lost{{CR}} is removed in any way, the {{ColorRed}}Ultra Secret Room{{CR}} will be revealed AND {{Collectible580}} opened", "Ansuz?", "en_us")
+        end
+        ansuzDescChosen = true
+        return descObj
+    end
+
+    EID:addDescriptionModifier("Ansuz?GreedMode", FlippedAnsuzModifierCondition, FlippedAnsuzModifierCallback)
+
+    function ResetAnsuzChosen()
+        ansuzDescChosen = false
+    end
+
+    mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, ResetAnsuzChosen)
 end

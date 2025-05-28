@@ -32,6 +32,7 @@ function mod:IsMonster(entity)
     entity.Type ~= EntityType.ENTITY_ENVIRONMENT and 
     entity.Type ~= EntityType.ENTITY_BOMB and
     entity.Type ~= EntityType.ENTITY_EFFECT and 
+    entity.Type ~= EntityType.ENTITY_FIREPLACE and
     entity.Type ~= EntityType.ENTITY_TEXT then
         return true
     end

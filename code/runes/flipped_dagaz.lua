@@ -29,7 +29,7 @@ function FlippedDagaz:UseFlippedDagaz(_, player, _)
     
     local level = Game():GetLevel()
     local newCurse = GetRandomCurse()
-    local allCursesPresent, _ = FlippedDagazCursesPresent()
+    local allCursesPresent, _ = CursesPresent()
     if allCursesPresent ~= true then
         level:AddCurse(newCurse, true)
         Game():ShakeScreen(10)
@@ -40,7 +40,7 @@ function FlippedDagaz:UseFlippedDagaz(_, player, _)
         end
 
         g_player = player
-        _, g_activeCurses = FlippedDagazCursesPresent() 
+        _, g_activeCurses = CursesPresent() 
     end
 end
 
@@ -53,7 +53,7 @@ function GetRandomCurse()
     local currentCurses = level:GetCurses()
     local newCurse
 
-    local allCursesPresent, _ = FlippedDagazCursesPresent()
+    local allCursesPresent, _ = CursesPresent()
 
     repeat newCurse = g_curses[math.random(#g_curses)]
     until newCurse & currentCurses == 0 or allCursesPresent == true
@@ -62,7 +62,7 @@ function GetRandomCurse()
 end
 
 --DAGAZ?: returns true if all curses giveable by Dagaz? are already present, false otherwise, also returns number of Dagaz? curses found
-function FlippedDagazCursesPresent()
+function CursesPresent()
 
     local g_activeCurses = Game():GetLevel():GetCurses()
     local numCurses = 0
@@ -93,7 +93,7 @@ function GetNumActiveCurses()
 end
 
 --DAGAZ?: finds enemies in the room and applies a random status to them
-function FlippedDagaz:FlippedDagazActiveOnNewRoom()
+function FlippedDagaz:ActiveOnNewRoom()
     if g_active ~= true or g_player == nil then
         return
     end
@@ -105,10 +105,23 @@ function FlippedDagaz:FlippedDagazActiveOnNewRoom()
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FlippedDagaz.FlippedDagazActiveOnNewRoom)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, FlippedDagaz.ActiveOnNewRoom)
+
+function FlippedDagaz:ActiveOnNewEnemyGreedMode(npc)
+
+    local roomType = Game():GetLevel():GetCurrentRoomDesc().Data.Type
+    if Game():IsGreedMode() and g_active and roomType == 1 then
+        if npc and mod:IsMonster(npc) then
+            ApplyRandomStatusEffect(npc, g_player)
+        end
+    end
+    
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_NPC_INIT, FlippedDagaz.ActiveOnNewEnemyGreedMode)
 
 --DAGAZ?: disables the floor-wide effect after changing floor and gets new g_floorStartCurses
-function FlippedDagaz:FlippedDagazResetGlobals(isContinued)
+function FlippedDagaz:ResetGlobals(isContinued)
     isContinued = isContinued or false
     if isContinued == false then
         g_floorStartCurses = GetNumActiveCurses()
@@ -120,8 +133,8 @@ function FlippedDagaz:FlippedDagazResetGlobals(isContinued)
     end
 end
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, FlippedDagaz.FlippedDagazResetGlobals)
-mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, FlippedDagaz.FlippedDagazResetGlobals)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, FlippedDagaz.ResetGlobals)
+mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, FlippedDagaz.ResetGlobals)
 
 --DAGAZ?: apply a random status effect to the enemy. chance to fail decreases with number of active curses
 function ApplyRandomStatusEffect(enemy, source)
@@ -137,17 +150,24 @@ function ApplyRandomStatusEffect(enemy, source)
         function(e, s) e:AddMidasFreeze(EntityRef(s), 300) end
     }
     local midasIndex = #statusEffects
+    local effectChosen
     --select a random effect
-    local effectChosen = math.random(#statusEffects)
-    --60% chance to reroll effect if midas is chosen
-    if effectChosen == midasIndex and math.random(100) < 60 then
+    if Game():IsGreedMode() then
+        --never pick midas in greed mode
+        effectChosen = math.random(#statusEffects - 1)
+    else
         effectChosen = math.random(#statusEffects)
-    end
 
+        --60% chance to reroll effect if midas is chosen
+        if effectChosen == midasIndex and math.random(100) < 60 then
+            effectChosen = math.random(#statusEffects)
+        end
+    end
+    
     local randomEffect = statusEffects[effectChosen]
     
     local activeC = GetNumActiveCurses()
-    if activeC == 0 then
+    if activeC == 0 or activeC == -1 then
         return
     end
     --apply the effect. chance of applying is 1/(#g_activeCurses + 1)

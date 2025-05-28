@@ -46,6 +46,12 @@ function FlippedAnsuz:UseFlippedAnsuz(_, player, _)
 
     mod:PlayOverlay("flippedAnsuz.png", mod.OverlayColors, flippedAnsuzSfx)
 
+    if Game():IsGreedMode() then
+        Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, player.Position + Vector(0,40), Vector(0,0), player, 0, mod:SafeRandom())
+        Game():Spawn(5, 100, player.Position + Vector(0,40), Vector(0,0), player, CollectibleType.COLLECTIBLE_XRAY_VISION, mod:SafeRandom())
+        return
+    end
+
     g_bossRoom = GetCorrectBossRoom()
     FlippedAnsuz:BossRoomCheck()
 
