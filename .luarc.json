@@ -1,5 +1,5 @@
 {	"runtime.version": "Lua 5.3",	"workspace.library": [
-		"c:\\Users\\clove\\.vscode\\extensions\\filloax.isaac-lua-api-vscode-1.12.0\\out\\emmylua\\vanilla"
+		"c:\\Users\\clove\\.vscode\\extensions\\filloax.isaac-lua-api-vscode-1.12.1\\out\\emmylua\\vanilla"
 	],	"diagnostics.globals": [
 		"ActionTriggers",
 		"ActiveSlot",
