@@ -10,12 +10,15 @@ Jera? - Rerolls pennies, bombs, keys, half red hearts and full red hearts into o
 Ehwaz? - Teleports Isaac to the Black Market 
 - spawns a 0 - The Fool card to let him teleport back out of it
 
-Dagaz? - Adds a random curse and a chance to add status effects to enemies when walking into rooms for the current floor. 
+Dagaz? - Adds a random curse and a chance to add status effects to enemies when walking into active rooms for the current floor. 
 - The chance for a status effect increases with amount of curses
+- In greed mode, the chance is applied to all enemies that spawn in the main room
 
 Ansuz? - Adds curse of the lost to the floor. If you manage to get rid of it, reveals and opens the Ultra Secret Room
-- beating the entire floor without getting hit will make the boss drop a Dagaz rune
-- having black candle causes this rune to reveal and open the Ultra Secret Room immediately upon use
+- beating floor's boss without getting hit will drop a Dagaz rune
+- having black candle causes this rune to reveal and open the Ultra Secret Room immediately upon use\
+- Doesn't spawn *naturally* in greed mode
+- In greed mode, overrides its normal ability and spawns the X-Ray Vision item.
 
 Perthro? - Rerolls items in the room into items the player already owns
 - Having multiple copies of an item increases its chances of being chosen
