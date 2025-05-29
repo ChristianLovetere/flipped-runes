@@ -14,6 +14,17 @@ mod.crackedFlippedBlackID = Isaac.GetCardIdByName("Black Rune..?")
 mod.brokenFlippedBlackID = Isaac.GetCardIdByName("Black Rune...")
 mod.shiningFlippedBlackID = Isaac.GetCardIdByName("Black Rune!?")
 
+if REPENTOGON then
+    mod.flippedHagalazGbook = Isaac.GetGiantBookIdByName("Hagalaz?")
+    mod.flippedJeraGbook = Isaac.GetGiantBookIdByName("Jera?")
+    mod.flippedEhwazGbook = Isaac.GetGiantBookIdByName("Ehwaz?")
+    mod.flippedDagazGbook = Isaac.GetGiantBookIdByName("Dagaz?")
+    mod.flippedAnsuzGbook = Isaac.GetGiantBookIdByName("Ansuz?")
+    mod.flippedPerthroGbook = Isaac.GetGiantBookIdByName("Perthro?")
+    mod.flippedBerkanoGbook = Isaac.GetGiantBookIdByName("Berkano?")
+    mod.flippedAlgizGbook = Isaac.GetGiantBookIdByName("Algiz?")
+end
+
 function mod:SafeRandom()
     local rand
     repeat rand = Random()

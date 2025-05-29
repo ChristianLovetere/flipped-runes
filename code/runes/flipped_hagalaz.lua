@@ -14,8 +14,13 @@ local g_hagalazUsedThisRoom = false
 
 function FlippedHagalaz:UseFlippedHagalaz()
     
-    mod:PlayOverlay("flippedHagalaz.png", mod.OverlayColors, flippedHagalazSfx)
-
+    if REPENTOGON then
+        ItemOverlay.Show(mod.flippedHagalazGbook)
+        SFXManager():Play(flippedHagalazSfx)
+    else
+        mod:PlayOverlay("flippedHagalaz.png", mod.OverlayColors, flippedHagalazSfx)
+    end
+    
     local pitLocations = {}
     local level = Game():GetLevel()
     local room = Game():GetRoom()

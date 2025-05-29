@@ -1,4 +1,5 @@
-function CollectibleIsStackable(collectible)
+local mod = FlippedRunes
+function mod:CollectibleIsStackable(collectible)
 
     local nonStackableCollectibles = {
         [CollectibleType.COLLECTIBLE_SPOON_BENDER] = false,

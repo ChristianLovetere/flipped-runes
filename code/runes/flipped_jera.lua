@@ -6,7 +6,13 @@ local flippedJeraSfx = Isaac.GetSoundIdByName("flippedJera")
 --rerolls basic pickups into more advanced forms (less chance for coins)
 function FlippedJera:UseFlippedJera()
 
-    mod:PlayOverlay("flippedJera.png", mod.OverlayColors, flippedJeraSfx)
+    if REPENTOGON then
+        ItemOverlay.Show(mod.flippedJeraGbook)
+        SFXManager():Play(flippedJeraSfx)
+    else
+        mod:PlayOverlay("flippedJera.png", mod.OverlayColors, flippedJeraSfx)
+    end
+    
 
     local entities = Isaac.GetRoomEntities()
 

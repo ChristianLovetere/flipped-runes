@@ -17,7 +17,13 @@ local g_count_GHG = nil
 ---@param player EntityPlayer
 function FlippedAlgiz:UseFlippedAlgiz(_, player, _)
 
-    mod:PlayOverlay("flippedAlgiz.png", mod.OverlayColors, flippedAlgizSfx)
+    if REPENTOGON then
+        ItemOverlay.Show(mod.flippedAlgizGbook)
+        SFXManager():Play(flippedAlgizSfx)
+    else
+        mod:PlayOverlay("flippedAlgiz.png", mod.OverlayColors, flippedAlgizSfx)
+    end
+    
 
     player:AddBrokenHearts(1)
     g_player = player

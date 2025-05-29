@@ -6,7 +6,12 @@ local flippedBerkanoSfx = Isaac.GetSoundIdByName("flippedBerkano")
 --deletes up to 2 vanilla familiars and turns them into items from the current room's pool
 function FlippedBerkano:UseFlippedBerkano(_, player, _)
 
-    mod:PlayOverlay("flippedBerkano.png", mod.OverlayColors, flippedBerkanoSfx)
+    if REPENTOGON then
+        ItemOverlay.Show(mod.flippedBerkanoGbook)
+        SFXManager():Play(flippedBerkanoSfx)
+    else
+        mod:PlayOverlay("flippedBerkano.png", mod.OverlayColors, flippedBerkanoSfx)
+    end
 
     --find familiars to remove
     local entities = Isaac.GetRoomEntities()

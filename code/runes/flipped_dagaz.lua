@@ -25,13 +25,23 @@ end
 --for the current floor. The chance for a status effect increases with amount of curses
 function FlippedDagaz:UseFlippedDagaz(_, player, _)
 
-    mod:PlayOverlay("flippedDagaz.png", mod.OverlayColors, flippedDagazSfx)
+    if REPENTOGON then
+        ItemOverlay.Show(mod.flippedDagazGbook)
+        SFXManager():Play(flippedDagazSfx)
+    else
+        mod:PlayOverlay("flippedDagaz.png", mod.OverlayColors, flippedDagazSfx)
+    end
+    
     
     local level = Game():GetLevel()
     local newCurse = GetRandomCurse()
     local allCursesPresent, _ = CursesPresent()
     if allCursesPresent ~= true then
-        level:AddCurse(newCurse, true)
+        if REPENTOGON then
+            level:AddCurse(newCurse, false)
+        else
+            level:AddCurse(newCurse, true)
+        end
         Game():ShakeScreen(10)
         g_active = true
 

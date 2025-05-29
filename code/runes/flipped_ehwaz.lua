@@ -9,7 +9,13 @@ local g_shouldSpawnReturnCard = nil
 --teleports Isaac to the Black Market and spawns a 0 - The Fool card to let him teleport back out of it
 function FlippedEhwaz:UseFlippedEhwaz()
 
-    mod:PlayOverlay("flippedEhwaz.png", mod.OverlayColors, flippedEhwazSfx)
+    if REPENTOGON then
+        ItemOverlay.Show(mod.flippedEhwazGbook)
+        SFXManager():Play(flippedEhwazSfx)
+    else
+        mod:PlayOverlay("flippedEhwaz.png", mod.OverlayColors, flippedEhwazSfx)
+    end
+    
 
     local game = Game()
     local level = game:GetLevel()

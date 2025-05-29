@@ -20,7 +20,13 @@ local g_numTotalCollectibles = g_numModdedCollectibles + CollectibleType.NUM_COL
 ---@param player EntityPlayer
 function FlippedPerthro:UseFlippedPerthro(_, player, _)
 
-    mod:PlayOverlay("flippedPerthro.png", mod.OverlayColors, flippedPerthroSfx)
+    if REPENTOGON then
+        ItemOverlay.Show(mod.flippedPerthroGbook)
+        SFXManager():Play(flippedPerthroSfx)
+    else
+        mod:PlayOverlay("flippedPerthro.png", mod.OverlayColors, flippedPerthroSfx)
+    end
+    
 
     local playerCollectiblesOwned = GetPlayerCollectibles(player)    
 
@@ -60,7 +66,7 @@ function FlippedPerthro:UseFlippedPerthro(_, player, _)
                     newItem = eligiblePlayerCollectiblesOwned[randomIndex]
                     table.remove(eligiblePlayerCollectiblesOwned, randomIndex)
 
-                until newItem and (not itemConfig:GetCollectible(newItem):HasTags(ItemConfig.TAG_QUEST)) and CollectibleIsStackable(newItem)
+                until newItem and not itemConfig:GetCollectible(newItem):HasTags(ItemConfig.TAG_QUEST) and mod:CollectibleIsStackable(newItem)
 
                 collectible:Morph(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, newItem, true)
                 Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, collectible.Position, Vector(0,0), nil, 0, mod:SafeRandom())               
@@ -77,7 +83,7 @@ function GetPlayerCollectibles(player)
 
     local ownedCollectibles = {}
 
-    for id = 1, g_numTotalCollectibles do
+    for id = 1, g_numTotalCollectibles - 1 do
         if player:HasCollectible(id, true) then
             local amount = player:GetCollectibleNum(id, true)
             for i = 1, amount do

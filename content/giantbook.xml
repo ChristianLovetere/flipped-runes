@@ -1,0 +1,42 @@
+<giantbook anm2root="gfx/ui/giantbook/">
+	<entry name="Hagalaz?" anm2="GiantBook.anm2" anim="Appear" gfx="flippedHagalaz.png" >
+		<layer name="poof" r="91" g="154" b="142" a="255" />
+		<layer name="bg" r="91" g="154" b="142" a="180" />
+		<layer name="poof2" r="91" g="154" b="142" a="255" />
+	</entry>
+    <entry name="Jera?" anm2="GiantBook.anm2" anim="Appear" gfx="flippedJera.png" >
+		<layer name="poof" r="91" g="154" b="142" a="255" />
+		<layer name="bg" r="91" g="154" b="142" a="180" />
+		<layer name="poof2" r="91" g="154" b="142" a="255" />
+	</entry>
+    <entry name="Ehwaz?" anm2="GiantBook.anm2" anim="Appear" gfx="flippedEhwaz.png" >
+		<layer name="poof" r="91" g="154" b="142" a="255" />
+		<layer name="bg" r="91" g="154" b="142" a="180" />
+		<layer name="poof2" r="91" g="154" b="142" a="255" />
+	</entry>
+    <entry name="Dagaz?" anm2="GiantBook.anm2" anim="Appear" gfx="flippedDagaz.png" >
+		<layer name="poof" r="91" g="154" b="142" a="255" />
+		<layer name="bg" r="91" g="154" b="142" a="180" />
+		<layer name="poof2" r="91" g="154" b="142" a="255" />
+	</entry>
+    <entry name="Ansuz?" anm2="GiantBook.anm2" anim="Appear" gfx="flippedAnsuz.png" >
+		<layer name="poof" r="91" g="154" b="142" a="255" />
+		<layer name="bg" r="91" g="154" b="142" a="180" />
+		<layer name="poof2" r="91" g="154" b="142" a="255" />
+	</entry>
+    <entry name="Perthro?" anm2="GiantBook.anm2" anim="Appear" gfx="flippedPerthro.png" >
+		<layer name="poof" r="91" g="154" b="142" a="255" />
+		<layer name="bg" r="91" g="154" b="142" a="180" />
+		<layer name="poof2" r="91" g="154" b="142" a="255" />
+	</entry>
+    <entry name="Berkano?" anm2="GiantBook.anm2" anim="Appear" gfx="flippedBerkano.png" >
+		<layer name="poof" r="91" g="154" b="142" a="255" />
+		<layer name="bg" r="91" g="154" b="142" a="180" />
+		<layer name="poof2" r="91" g="154" b="142" a="255" />
+	</entry>
+    <entry name="Algiz?" anm2="GiantBook.anm2" anim="Appear" gfx="flippedAlgiz.png" >
+		<layer name="poof" r="91" g="154" b="142" a="255" />
+		<layer name="bg" r="91" g="154" b="142" a="180" />
+		<layer name="poof2" r="91" g="154" b="142" a="255" />
+	</entry>
+</giantbook>

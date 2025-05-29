@@ -31,6 +31,10 @@ local g_currentAnim
 local g_currentAnim_GHG
 local g_indicatorJustActivated = false
 
+local g_initCount = 0
+local g_initDuration = 45
+local g_initEnable = false
+
 ---@enum ansuzAnim
 local ansuzAnim = {
     ACTIVE = 1,
@@ -44,7 +48,13 @@ local ansuzAnim = {
 ---@param player EntityPlayer
 function FlippedAnsuz:UseFlippedAnsuz(_, player, _)
 
-    mod:PlayOverlay("flippedAnsuz.png", mod.OverlayColors, flippedAnsuzSfx)
+    if REPENTOGON then
+        ItemOverlay.Show(mod.flippedAnsuzGbook)
+        SFXManager():Play(flippedAnsuzSfx)
+    else
+        mod:PlayOverlay("flippedAnsuz.png", mod.OverlayColors, flippedAnsuzSfx)
+    end
+    
 
     if Game():IsGreedMode() then
         Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, player.Position + Vector(0,40), Vector(0,0), player, 0, mod:SafeRandom())
@@ -67,20 +77,7 @@ function FlippedAnsuz:UseFlippedAnsuz(_, player, _)
     --Anim stuff
     g_indicatorJustActivated = true
     g_indicatorPlayer = player
-    g_indicator = Sprite()
-    g_indicator:Load("gfx/flippedAnsuzIndicator.anm2", true)
-    if not g_damageTakenThisFloor then
-        g_indicator.PlaybackSpeed = 1.0
-        g_indicator:Play("Active")
-        g_currentAnim = ansuzAnim.ACTIVE
-        g_indicatorMaxFrame = 11
-    else
-        g_indicator.PlaybackSpeed = 1.5
-        g_indicator:Play("Lost")
-        g_currentAnim = ansuzAnim.LOST
-        SFXManager():Play(SoundEffect.SOUND_THUMBS_DOWN)
-    end
-    
+    g_initEnable = true
 end
 
 mod:AddCallback(ModCallbacks.MC_USE_CARD, FlippedAnsuz.UseFlippedAnsuz, mod.flippedAnsuzID)
@@ -359,11 +356,11 @@ function FlippedAnsuz:OnRewind()
 
     g_currentAnim = g_currentAnim_GHG
     
-    if g_currentAnim == ansuzAnim.ACTIVE then
+    if g_currentAnim == ansuzAnim.ACTIVE and g_indicator then
         g_indicator:Play("Active", true)
-    elseif g_currentAnim == ansuzAnim.LOST then
+    elseif g_currentAnim == ansuzAnim.LOST and g_indicator then
         g_indicator:Play("Lost", true)
-    elseif g_indicatorJustActivated then
+    elseif g_indicatorJustActivated and g_indicator then
         g_indicator:Reset()
     end
 
@@ -447,6 +444,33 @@ end
 
 mod:AddCallback(ModCallbacks.MC_POST_UPDATE, FlippedAnsuz.SpawnDagazCenterRoom)
 
+function FlippedAnsuz:InitAnimOnUse()
+    if g_initEnable then    
+        if g_initCount == g_initDuration then
+            Game():Spawn(EntityType.ENTITY_EFFECT, EffectVariant.POOF01, g_indicatorPlayer.Position + Vector(0,-45), Vector(0,0), g_indicatorPlayer, 0, mod:SafeRandom())
+            g_initCount = 0
+            g_initEnable = false
+            g_indicator = Sprite()
+            g_indicator:Load("gfx/flippedAnsuzIndicator.anm2", true)
+            if not g_damageTakenThisFloor then
+                g_indicator.PlaybackSpeed = 1.0
+                g_indicator:Play("Active")
+                g_currentAnim = ansuzAnim.ACTIVE
+                g_indicatorMaxFrame = 11
+            else
+                g_indicator.PlaybackSpeed = 1.5
+                g_indicator:Play("Lost")
+                g_currentAnim = ansuzAnim.LOST
+                SFXManager():Play(SoundEffect.SOUND_THUMBS_DOWN)
+            end
+            return
+        end
+        g_initCount = g_initCount + 1
+    end
+end
+
+mod:AddCallback(ModCallbacks.MC_POST_UPDATE, FlippedAnsuz.InitAnimOnUse)
+
 function FlippedAnsuz:ResetGlobals(isContinued)
     isContinued = isContinued or false
     if isContinued == false then
@@ -469,6 +493,9 @@ function FlippedAnsuz:ResetGlobals(isContinued)
         g_indicator = nil
         g_indicatorPlayer = nil
         g_currentAnim = nil
+
+        g_initCount = 0
+        g_initEnable = false
     end
 end
 
@@ -477,7 +504,7 @@ mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, FlippedAnsuz.ResetGlobals)
 
 function FlippedAnsuz:OnRender()
 
-    if g_indicatorPlayer then
+    if g_indicatorPlayer and g_indicator then
         
         if g_currentAnim == ansuzAnim.ACTIVE then
             if Isaac.GetFrameCount() % 4 == 0 then
@@ -498,7 +525,8 @@ function FlippedAnsuz:OnRender()
                 g_indicator:Update()
             end
         end
-        local playerPos = Isaac.WorldToScreen(g_indicatorPlayer.Position)
+        local room = Game():GetRoom()
+        local playerPos = Isaac.WorldToScreen(g_indicatorPlayer.Position) - room:GetRenderScrollOffset() - Game().ScreenShakeOffset
         local abovePlayerHead = playerPos + Vector(0, -45)
         g_indicator:Render(abovePlayerHead)
         if g_indicator:IsFinished() then
