@@ -15,7 +15,7 @@ Dagaz? - Adds a random curse and a chance to add status effects to enemies when 
 - In greed mode, the chance is applied to all enemies that spawn in the main room
 
 Ansuz? - Adds curse of the lost to the floor. If you manage to get rid of it, reveals and opens the Ultra Secret Room
-- beating the floor's boss without getting hit will drop a Dagaz rune
+- beating the floor's boss without getting hit for the whole floor will drop a Dagaz rune
 - having Black Candle causes this rune to reveal and open the Ultra Secret Room immediately upon use
 - Doesn't spawn *naturally* in greed mode
 - In greed mode, overrides its normal ability and spawns the X-Ray Vision item.

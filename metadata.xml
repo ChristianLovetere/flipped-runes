@@ -1,8 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <metadata>
-	<name>Flipped Runes</name>
-	<directory>flipped runes</directory>
-	<description/>
-	<version>1.0</version>
-	<visibility/>
-</metadata>
+    <name>Flipped Runes</name>
+    <directory>flipped runes</directory>
+    <id>3489969813</id>
+    <description>Flipped Runes
 
+A mod for The Binding of Isaac: Repentance/Repentance+ that adds flipped versions of all 10 runes.
+
+**Note!** This mod is compatible with Repentogon but does NOT require it. The only functional difference between RGON and no RGON is that, without it, the overlay animations for the flipped runes will not briefly pause the game like they do with normal runes.
+
+Hagalaz? - Fills all pits in the room
+- Pits stay filled even if the room is exited
+
+Jera? - Rerolls pennies, bombs, keys, half red hearts and full red hearts into other variants of their pickup type
+- Works on pickups that are for sale
+
+Ehwaz? - Teleports Isaac to the Black Market 
+- spawns a 0 - The Fool card to let him teleport back out of it
+
+Dagaz? - Adds a random curse and a chance to add status effects to enemies when walking into active rooms for the current floor. 
+- The chance for a status effect increases with amount of curses
+- In greed mode, the chance is applied to all enemies that spawn in the main room
+
+Ansuz? - Adds curse of the lost to the floor. If you manage to get rid of it, reveals and opens the Ultra Secret Room
+- beating the floor's boss without getting hit for the whole floor will drop a Dagaz rune
+- having Black Candle causes this rune to reveal and open the Ultra Secret Room immediately upon use
+- Doesn't spawn *naturally* in greed mode
+- In greed mode, overrides its normal ability and spawns the X-Ray Vision item.
+
+Perthro? - Rerolls items in the room into items the player already owns
+- Having multiple copies of an item increases its chances of being chosen
+- will generally avoid items that have no benefit when owning multiple of them
+- If no eligible items are owned, rerolls into a random item from the current room's pool
+
+Berkano? - Removes up to 2 vanilla familiars and spawns an item from the current room's pool for each familiar removed
+
+Algiz? - Gives +1 Broken Heart, and grants a 2x tears multiplier and +10 luck that wears off over 40 seconds
+
+Blank Rune? - Converts all rune pickups in the room into their flipped variants
+- Works on runes that are for sale
+
+Black Rune? - Creates a wide variety of pickups
+- Highly volatile!
+- Can't be mimicked by Clear Rune
+</description>
+    <version>1.1</version>
+    <visibility>Private</visibility>
+    <tag id="Lua"/>
+    <tag id="Items"/>
+    <tag id="Cards"/>
+    <tag id="Pickups"/>
+</metadata>
